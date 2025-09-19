@@ -15,4 +15,4 @@ output_df = pd.DataFrame({'year':time_list.dt.year,
                           'depth':df['depth']
                           })
 print(output_df)
-output_df.to_csv(r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Data\Earthquake_catalog\Declustering\EarthquakeCatalog_Depth40kmbelow_Magnitude4.8above_Declutering.csv', index=False, encoding='utf-8-sig')
+output_df.to_csv(r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Data\Earthquake_catalog\Time_seperate\EarthquakeCatalog_Depth40kmbelow_Magnitude4.8above_Declutering.csv', index=False, encoding='utf-8-sig')
