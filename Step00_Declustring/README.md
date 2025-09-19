@@ -11,4 +11,26 @@
 
 ## コード
 ### 00_データ前処理
-- 
+- pandasライブラリを使用する。
+- <details><summary>コードソース</summary>
+
+```py
+import pandas
+
+df = pd.read_csv(r'C:\卒業研究\Exercise\練習問題3_データ.csv', encoding='cp932')
+time_list = pd.to_datetime(df['time'])
+output_df = pd.DataFrame({'年':time_list.dt.year,
+                          '月':time_list.dt.month,
+                          '日':time_list.dt.day,
+                          '時間':time_list.dt.hour,
+                          '分':time_list.dt.minute,
+                          '秒':time_list.dt.second,
+                          'ミリ秒':time_list.dt.microsecond,
+                          '緯度':df['latitude'],
+                          '経度':df['longitude'],
+                          'マグニチュード':df['mag']
+                          })
+print(output_df)
+output_df.to_csv(r'C:\卒業研究\Exercise\練習問題3_解答.csv', index=False, encoding='cp932')
+```
+</details>
