@@ -12,7 +12,7 @@
 ## コード
 ### 00_データ前処理
 - pandasライブラリを使用する。
-- <details><summary>コードソース</summary>
+<details><summary>コードソース</summary>
 
 ```py
 import pandas
