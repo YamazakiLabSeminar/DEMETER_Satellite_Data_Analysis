@@ -12,7 +12,7 @@
 ## コード
 ### 00_データ前処理
 - pandasライブラリを使用する。
-	<details><summary>コードソース</summary>
+<details><summary>コードソース</summary>
 
 ```py
 import pandas
@@ -33,4 +33,4 @@ output_df = pd.DataFrame({'年':time_list.dt.year,
 print(output_df)
 output_df.to_csv(r'C:\卒業研究\Exercise\練習問題3_解答.csv', index=False, encoding='cp932')
 ```
-	</details>
+</details>
