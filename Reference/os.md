@@ -7,7 +7,7 @@
 ```py
 import os
 
- # osモジュールの関数を使用
+=== osモジュールの関数を使用 ===
 current_dir = os.getcw()
 print(f'現在のディレクトリ: {current_dir}')
 ```
