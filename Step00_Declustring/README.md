@@ -51,4 +51,5 @@ output_df.to_csv(r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analys
 
 ### 01_デクラスタリング（除去）
 - 1\. **00_データ前処理**で新しく作成したcsvファイルを地震発生時刻の新しい順にソートする。
-- 2\. 
+- 2\. **Gardner&Knopoffの経験則**より、ルックアップテーブルを作成し、線形補間関数を作成し定義する。
+- 
