@@ -46,5 +46,4 @@ output_df.to_csv(r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analys
 </details>
 
 ### 01_デクラスタリング（除去）
-- **クラスタ、デクラスタリング（クラスタ除去)**
-	- 地震は空間的、時間的に群（クラスタ：cluster）をなして起きることが多い。「前震・余震」、「群発地震」などが典型的なクラスである。余震活動等の影響を取り除い、または、本震のみを抽出することをデクラスタリング（クラスタ除去）という。
+- [Gardner&Knopoff(1974)](https://doi.org/10.1785/BSSA0640051363)より
