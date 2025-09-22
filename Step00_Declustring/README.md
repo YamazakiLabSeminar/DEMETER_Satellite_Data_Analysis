@@ -10,10 +10,15 @@
  	- 新しく作成した地震カタログをデクラスタリングする。
 
 ## コード
-- Editor: Vscode
-- Python 3.13(16-bit)
+### 環境
+- VsCode Python 3.12.1(16-bit)
 - ライブラリの使用：
-  - pandas、[os](https://github.com/YamazakiLabSeminar/DEMETER_Satellite_Data_Analysis/blob/15bf2f1f95f5279023fe3d9d450addb490ac84a1/Reference/os.md)
+  - pandas2.2.1
+  - [os](https://github.com/YamazakiLabSeminar/DEMETER_Satellite_Data_Analysis/blob/15bf2f1f95f5279023fe3d9d450addb490ac84a1/Reference/os.md)
+  - numpy 1.26.4
+  - matplotlib 3.8.0
+  - Cartopy 0.22.0
+
 ### 00_データ前処理
 - pandasライブラリを使用する。
 <details><summary>コードソース</summary>
