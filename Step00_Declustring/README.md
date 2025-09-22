@@ -22,6 +22,7 @@
   - numpy 1.26.4
   - matplotlib 3.8.0
   - Cartopy 0.22.0
+  - geopy 2.4.1
 
 ### 00_データ前処理
 - pandasライブラリを使用する。
