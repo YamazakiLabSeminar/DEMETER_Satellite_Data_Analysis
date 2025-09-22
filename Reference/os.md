@@ -4,14 +4,21 @@
 ## インストール
 - Terminalで操作する。
 <details><summary>コードソース</summary>
-```py
-import os
 
-=== osモジュールの関数を使用 ===
-current_dir = os.getcw()
+```python
+import os
+--- osモジュールの関数を使用する ---
+current_dir = os.getcwd()
 print(f'現在のディレクトリ: {current_dir}')
 ```
-
 </details>
 
 ## ディレクトリの操作
+- 新しいディレクトリを作成し、そのディレクトリに移動し、最後に元のディレクトリに戻る方法。
+<details><summary>ディレクトリの操作</summary>
+```python
+import os
+--- 現在のディレクトリを取得 ---
+
+```
+</details>
