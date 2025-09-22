@@ -16,9 +16,23 @@ print(f'現在のディレクトリ: {current_dir}')
 ## ディレクトリの操作
 - 新しいディレクトリを作成し、そのディレクトリに移動し、最後に元のディレクトリに戻る方法。
 <details><summary>ディレクトリの操作</summary>
+
 ```python
 import os
 --- 現在のディレクトリを取得 ---
+original_dir = os.getcwd()
+print(f"元のディレクトリ: {original_dir}")
 
+--- 新しいディレクトリを作成 ---
+os.mkdir("新しいフォルダ")
+
+--- 新しいディレクトリに移動 ---
+os.chdir("新しいフォルダ")
+print(f"新しいディレクトリ: {os.getcwd()}")
+
+--- 元のディレクトリに戻る ---
+os.chdir(original_dir)
+print(f"元のディレクトリに戻りました: {os.getcwd()}")
 ```
+
 </details>
