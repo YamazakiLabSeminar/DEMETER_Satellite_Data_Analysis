@@ -10,6 +10,10 @@
  	- 新しく作成した地震カタログをデクラスタリングする。
 
 ## コード
+- Editor: Vscode
+- Python 3.13(16-bit)
+- ライブラリの使用：
+  - pandas、os
 ### 00_データ前処理
 - pandasライブラリを使用する。
 <details><summary>コードソース</summary>
