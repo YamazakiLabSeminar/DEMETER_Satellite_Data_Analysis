@@ -76,7 +76,7 @@ def declustering():
 
     # === 2.地震データを読み込み ===
     print(f'[Info] Reading input CSV: {input_csv_path}')
-    df = pd.read_csv(input_csv_path,useclos=['year','month','day','hour','minute','second','latitude','longitude','magnitude'])
+    df = pd.read_csv(input_csv_path,usecols=['year','month','day','hour','minute','second','latitude','longitude','magnitude'])
 
     # === 3.日時データをdatetime形式に変換 ===
     df['datetime'] = convert_to_datetime(df)
