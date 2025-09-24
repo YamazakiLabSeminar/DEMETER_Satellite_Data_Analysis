@@ -53,7 +53,7 @@ def declustering():
 
     # === 0.ディレクトリ設定 ===
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    input_csv_path = os.path.join(current_dir, 'Data', 'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Data\EarthquakeCatalog_Depth40kmbelow_Magnitude4.8above_TimeSeperate.csv')
+    input_csv_path = os.path.join(current_dir, 'Data', 'EarthquakeCatalog_Depth40kmbelow_Magnitude4.8above_TimeSeperate.csv')
 
     # ファイル名を動的に生成: 例: all-eq-declustering-30day-30km.csv
     output_file_name = f'all-eq-declustering-{TIME_WINDOW_DAYS}day-{DISTANCE_WINDOW}km.csv'
