@@ -106,14 +106,15 @@ def declustring():
 
         ### 時系列昇順リストでの現在地震および閾値(cutoff)の地震の検索
         start_id = df_time['datetime'].searchsorted(primary_eq_time, side='right')
-        end_id = df_time['datetime'].searchsorted(pd.Timedelta(primary_eq_time+days_threshold), side='left')
+        cutoff_time = primary_eq_time + pd.Timedelta(days=days_threshold)
+        end_id = df_time['datetime'].searchsorted(cutoff_time, side='left')
 
         ### 時間期間中のeqを全部flag==falseにする
         for j in range(start_id, end_id):
             second_event_id = df_time.loc[j, 'event_id']
 
             #### すでに削除された場合、スキップ
-            if df_time.loc[j, 'removed_flag']:
+            if df_time.loc[j, 'removed_flag'] == True:
                 continue
 
             #### 時間差のcheck
