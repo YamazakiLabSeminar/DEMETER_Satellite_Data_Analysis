@@ -6,7 +6,8 @@ import os
 # ======== 0.パースの設定 ========
 INPUT_DATA = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Output\eq_m4.8above_depth40kmbelow_200407-201012_add_time_row.csv'
 OUTPUT_DATA = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Output\all_eq_declustring_30day_30km.csv'
-LOG_FILE = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Output\logay_30km.txt'
+LOG_FILE = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Output\log_30day_30km.txt'
+LOG_FILE_CSV = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Output\log_30day_30km.csv'
 
 # ======== 1.定数の設定 ========
 days_threshold = 30     # 時間ウィンドウ[days]
@@ -74,7 +75,68 @@ def declustring():
 
     # 4.ユニックIDの付与
     df['event_id'] = df.index   #0から連番
+    print(f'[Info] Events dataframe before declustring: {df}')
 
     # 5.dfの作成(マグニチュード順/時系列順)
-    df_mag = df.sort_values(by='magnitude', ascending=False).reset_index(drop=True)
-    df_time = df.sort_values(by='datetime', ascending=True).reset_index(drop=True)
+    df_mag = df.sort_values(by='magnitude', ascending=False).reset_index(drop=True) #マグニチュード降順
+    df_time = df.sort_values(by='datetime', ascending=True).reset_index(drop=True)  #時系列昇順
+    print(f'[Info] Events dataframe sorted by magnitude:{df_mag}')
+    print(f'[Info] Events dataframe sorted by time:{df_time}')
+
+    # 6.マグニチュード順に走査する
+    total_events = len(df_mag)
+    print(f'[Info] Total events:{total_events}')
+
+    ## 削除フラグの列を追加
+    df_mag['removed_flag'] = np.zeros(total_events, dtype=bool)
+
+    ## マグニチュード順に選択された'現在地震インデックス'、'現在地震イベント'について
+    for primary_eq_index, primary_eq in df_mag.iterrows():
+        ### 現在地震indexがlogファイルのindexより小さいの場合、skip
+        if primary_eq_index < log_index:
+            continue
+        ### 現在地震のevent_idを取得
+        event_id = primary_eq['event_id']
+
+        ### if primary eq is removed, skip
+        if primary_eq['removed_flag']: # removed_flag == True
+            continue
+
+        primary_eq_time = primary_eq['datetime']
+
+        ### 時系列昇順リストでの現在地震および閾値(cutoff)の地震の検索
+        start_id = df_time['datetime'].searchsorted(primary_eq_time, side='right')
+        end_id = df_time['datetime'].searchsorted(pd.Timedelta(primary_eq_time+days_threshold), side='left')
+
+        ### 時間期間中のeqを全部flag==falseにする
+        for j in range(start_id, end_id):
+            second_event_id = df_time.loc[j, 'event_id']
+
+            #### すでに削除された場合、スキップ
+            if df_time.loc[j, 'removed_flag']:
+                continue
+
+            #### 時間差のcheck
+            second_eq_time = df_time.loc[j, 'datetime']
+            if delta_time_in_days(primary_eq_time, second_eq_time) > days_threshold:
+                continue
+
+            #### 距離差のcheck
+            lat_a = primary_eq['latitude']
+            lon_a = primary_eq['longitude']
+            lat_b = df_time.loc[j, 'latitude']
+            lon_b = df_time.loc[j, 'longitude']
+            if delta_distance_in_km(lon_a, lat_a, lon_b, lat_b) < distance_threshold:
+                df_mag.loc[df_mag['event_id']==second_event_id, 'removed_flag'] = True
+
+        ## 500個に保存
+        if primary_eq_index % 500 == 0:
+            print(f'[Progress] primary eq index ={primary_eq_index}/{total_events}')
+            df[df_mag['removed_flag']==False].to_csv(LOG_FILE_CSV, index=False)
+            with open(LOG_FILE, 'w') as f:
+                f.write(str(primary_eq_index))
+    
+    df[df_mag['removed_flag']==False].to_csv(OUTPUT_DATA, index=False)
+
+if __name__ == '__main__':
+    declustring()
