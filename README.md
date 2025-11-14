@@ -5,5 +5,8 @@
 Visual Studio Code Python 3.12.1
 - 使用パッケージ：
 	- pandas 2.2.1
- - numpy 1.26.4
- - matplotlib 3.8.0
+ 	- numpy 1.26.4
+ 	- matplotlib 3.8.0
+
+## [00_デクラスタリング](Step00_Declustring)
+Gardner&Knopoff(1974)の経験則に基づいた手法で2004~2007の地震カタログ(USGS)から本震を抽出する。
