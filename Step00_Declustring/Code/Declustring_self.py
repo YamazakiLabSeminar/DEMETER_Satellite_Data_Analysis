@@ -77,18 +77,19 @@ def declustring():
     df['event_id'] = df.index   #0から連番
     print(f'[Info] Events dataframe before declustring: {df}')
 
-    # 5.dfの作成(マグニチュード順/時系列順)
+    # 5. 削除フラグを追加
+    df['removed_flag'] = False
+
+    # 6.dfの作成(マグニチュード順/時系列順)
     df_mag = df.sort_values(by='magnitude', ascending=False).reset_index(drop=True) #マグニチュード降順
     df_time = df.sort_values(by='datetime', ascending=True).reset_index(drop=True)  #時系列昇順
     print(f'[Info] Events dataframe sorted by magnitude:{df_mag}')
     print(f'[Info] Events dataframe sorted by time:{df_time}')
 
-    # 6.マグニチュード順に走査する
+    # 7.マグニチュード順に走査する
     total_events = len(df_mag)
     print(f'[Info] Total events:{total_events}')
 
-    ## 削除フラグの列を追加
-    df_mag['removed_flag'] = np.zeros(total_events, dtype=bool)
 
     ## マグニチュード順に選択された'現在地震インデックス'、'現在地震イベント'について
     for primary_eq_index, primary_eq in df_mag.iterrows():
@@ -133,11 +134,11 @@ def declustring():
         ## 500個に保存
         if primary_eq_index % 500 == 0:
             print(f'[Progress] primary eq index ={primary_eq_index}/{total_events}')
-            df[df_mag['removed_flag']==False].to_csv(LOG_FILE_CSV, index=False)
             with open(LOG_FILE, 'w') as f:
                 f.write(str(primary_eq_index))
-    
-    df[df_mag['removed_flag']==False].to_csv(OUTPUT_DATA, index=False)
+
+    # 8.最終出力    
+    df_mag[df_mag['removed_flag']==False].to_csv(OUTPUT_DATA, index=False)
 
 if __name__ == '__main__':
     declustring()
