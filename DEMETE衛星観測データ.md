@@ -26,3 +26,5 @@
 ## 利用データ
 スペクトルデータを取得するSurvey modeで測定したVLF帯の電場データを利用する。
 - 水平電場1成分、磁場1成分について**常時2.048秒ごと**の**平均スペクトル**をオンボード上で**20kHz幅**を**1024点(分解能19.53125Hz)**で算出してデータを取得する。
+
+- [データシート](https://github.com/YamazakiLabSeminar/DEMETER_Satellite_Data_Analysis/blob/main/Reference/DEMETER_datesheet%20(3).pdf)
