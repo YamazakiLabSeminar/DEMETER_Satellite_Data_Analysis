@@ -4,7 +4,7 @@
 
 ## 理論
 - 00_データ前処理
-	- USGSから、**2004年～2010年まで**に起こった**震源の深さ40km以内**、**マグニチュードM4.8以上**の地震カタログを[csvファイル](C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Data\eq_m4.8above_depth40kmbelow_200407-201012.csv)としてダウンロードする。
+	- USGSから、**2004年～2010年まで**に起こった**震源の深さ40km以内**、**マグニチュードM4.8以上**の地震カタログを[csvファイル](https://github.com/YamazakiLabSeminar/DEMETER_Satellite_Data_Analysis/blob/3db324047bcf3e516c1e425ed0787ece02918a8f/Step00_Declustring/Data/eq_m4.8above_depth40kmbelow_200407-201012.csv)としてダウンロードする。
  	- そのcsvファイルの時間列を**年、月、日、時間、分、秒、ミリ秒**に分けて、新しいcsvファイルとして保存する。
 - 01_デクラスタリング（クラスタ除去）
 	- [Gardner&Knopoff(1974)](https://doi.org/10.1785/BSSA0640051363)のアルゴリズムを利用することより、デクラスタリングを実行する。
