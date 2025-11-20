@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+import datetime
 
 SSD_DIRECTORY = r'F:/'
 SAT_DATA_DIR = r'F:/01_EFdata'
@@ -17,9 +18,18 @@ if not os.path.exists(SAT_DATA_DIR):
 else:
     print(f'[Info] ディレクトリを切り替えました:{os.getcwd()}')
 
+# 夜間軌道リスト
+night_orbit_list=[]
+night_time_start = datetime.time(22,30)
+night_time_end = datetime.time(6,0)
+
+print("[Info] 処理開始...")
+
 # folder内のファイル名を読み取り、軌道番号(昇順)にソートする
 for filename in sorted(os.listdir(SAT_DATA_DIR)):
     if not filename.endswith('.csv'):
+        continue
+    if filename.startswith('.'): 
         continue
     filepath = os.path.join(SAT_DATA_DIR, filename)
 
@@ -30,15 +40,45 @@ for filename in sorted(os.listdir(SAT_DATA_DIR)):
     orbit_part = parts[3] # ファイル名の3番目の要素を取り出す
     orbit_num = orbit_part.split(".")[0] # ".1"や".0"などを除去する
 
-    # 夜間軌道リスト
-    night_orbit_list=[]
-    night_time_start = pd.Timedelta(2230)
-    night_time_end = pd.Timedelta(600)
-
     try:
-        df = pd.read_csv(filepath, usecols=["year","month","date","hour","min","sec","milsec"])
-        datetime = pd.to_datetime(df)
-        if datetime >= night_time_start & datetime <= night_time_end:
+        df = pd.read_csv(filepath)
+
+        cols = ["year","month","date","hour","min","sec","milsec"]
+
+        # --- 数字以外の行を NaN にする ---
+        for c in cols:
+            df[c] = df[c].astype(str).str.strip()
+
+            # 数字以外（マイナスや小数も許可）を判別
+            mask = df[c].str.match(r'^-?\d+(\.\d+)?$')
+            df.loc[~mask, c] = None
+
+        # --- float → int へ（小数は切り捨て）---
+        df[cols] = df[cols].astype(float).astype(int)
+
+        # --- microsecond へ変換 ---
+        df["datetime"] = pd.to_datetime(
+            dict(
+                year=df["year"],
+                month=df["month"],
+                day=df["date"],
+                hour=df["hour"],
+                minute=df["min"],
+                second=df["sec"],
+                microsecond=df["milsec"] * 1000
+            ),
+            errors="coerce"
+        )
+
+        # --- datetime 生成できなかった行は削除 ---
+        df = df.dropna(subset=["datetime"])
+
+        if df.empty:
+            continue
+        # --- 最初の時刻を取得 ---
+        first_time = df["datetime"].iloc[0].time()
+
+        if (first_time >= night_time_start) or (first_time <= night_time_end):
             night_orbit_list.append(orbit_num.zfill(5))
         else:
             continue
