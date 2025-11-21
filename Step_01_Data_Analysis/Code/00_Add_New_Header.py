@@ -3,8 +3,12 @@ import numpy as np
 import os
 
 # Path of Input folder and Output folder
-INPUT_DIR = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step_01_Data_Analysis\Data\For_Testing'
-OUTPUT_DIR = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step_01_Data_Analysis\Output\For_Testing'
+# For testing
+#INPUT_DIR = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step_01_Data_Analysis\Data\For_Testing'
+#OUTPUT_DIR = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step_01_Data_Analysis\Output\For_Testing'
+
+INPUT_DIR = r'F:/01_EFdata'
+OUTPUT_DIR =r'F:/01_EFdata_new_header'
 
 # Path of log file of Processed file
 PROCESSED_FILES_LOG_FILE = os.path.join(OUTPUT_DIR, 'processed_files_log.csv')
@@ -17,7 +21,7 @@ else:
     processed_files = set()
 
 # 処理済ファイルのログ用リストを作成
-new_preocessed_list = []
+new_preocessed_files_list = []
 file_count = 0
 
 # Read the file in input folder as a list
@@ -45,6 +49,35 @@ for index, file_name in enumerate(file_list):
 
         header1 = ['year', 'month', 'day', 'hour', 'min', 'sec', 'msec', 'lat', 'lon', 'mlat', 'mlon']
         new_header = header1 + Hz_headers
-        
+
+        # new dataframe
+        df_with_new_header = pd.DataFrame(input_file_df.values, columns=new_header)
+
+        # path of output file
+        output_file = os.path.join(OUTPUT_DIR, file_name)
+
+        # save new dataframe in outputfile as csv file
+        df_with_new_header.to_csv(output_file, index=False)
+
+        # 処理終わったら処理済ファイルのログ用リストに追加
+        new_preocessed_files_list.append(file_name)
+        file_count += 1
+
+        # 100個になったら一応報告
+        if file_count % 100 == 0:
+            print(f"[Info] Processing:{file_count}/{len(file_list)}")
+
     except Exception as e:
         print(f'Error processing {file_name}: {str(e)}')
+
+# 新しい処理済みファイルのログを更新
+if new_preocessed_files_list:
+    new_processed_files_df = pd.DataFrame(new_preocessed_files_list, columns=['Processed_Files'])
+    if os.path.exists(PROCESSED_FILES_LOG_FILE):
+        old_processed_files_df = pd.read_csv(PROCESSED_FILES_LOG_FILE)
+        updated_processed_files_df = pd.concat([old_processed_files_df, new_processed_files_df], ignore_index=True)
+    else:
+        updated_processed_files_df = new_processed_files_df
+    updated_processed_files_df.to_csv(PROCESSED_FILES_LOG_FILE, index=False)
+
+print(f'[Info] 処理済みファイル名のログが {PROCESSED_FILES_LOG_FILE} に保存されました。')
