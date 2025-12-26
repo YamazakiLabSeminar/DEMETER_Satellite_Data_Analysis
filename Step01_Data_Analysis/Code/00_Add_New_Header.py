@@ -35,6 +35,9 @@ file_count = 0
 # Read the file in input folder as a list
 file_list = [f for f in os.listdir(INPUT_DIR) if f.endswith('.csv')]
 
+# 処理開始の提示
+print(f"[Info] 処理開始")
+
 # Zipファイルを開く(追記モード)
 with zipfile.ZipFile(COMPRESSED_OUTPUT, 'w', zipfile.ZIP_DEFLATED) as zipf:
 
