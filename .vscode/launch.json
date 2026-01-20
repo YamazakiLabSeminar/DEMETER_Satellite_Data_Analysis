@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run DEMETER Script",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "args": [
+        "--sat", "C:/Users/nzy27/Documents/Github/DEMETER_Satellite_Data_Analysis/Step01_Data_Analysis/Data/For_Testing",
+        "--kp",  "C:/Users/nzy27/Documents/Github/DEMETER_Satellite_Data_Analysis/Step01_Data_Analysis/Data/kpデータ_ALL(csv).csv",
+        "--out", "C:/Users/nzy27/Documents/Github/DEMETER_Satellite_Data_Analysis/Step01_Data_Analysis/Data/out"
+      ]
+    }
+  ]
+}
