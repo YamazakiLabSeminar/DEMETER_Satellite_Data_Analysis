@@ -8,7 +8,7 @@ os.makedirs(output_directory, exist_ok=True)
 processed_files_log_file = os.path.join(output_directory, "processed_files_log.csv")
 
 # --- ヘッダーは1回だけ作る ---
-header1 = ['year', 'month', 'day', 'hour', 'min', 'sec', 'msec', 'lat', 'lon', 'mlat', 'mlon']
+header1 = ['year', 'month', 'day', 'hour', 'min', 'second', 'msecond', 'lat', 'lon', 'mlat', 'mlon']
 sequence = [i * 19.53125 for i in range(1, 1025)]
 hz_headers = [f"{v}Hz" for v in sequence]
 new_header = header1 + hz_headers
