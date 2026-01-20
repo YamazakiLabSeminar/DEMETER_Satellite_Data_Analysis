@@ -187,9 +187,9 @@ def iter_csv_files(p: Path) -> List[Path]:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--sat", required=True, help="C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step01_Data_Analysis\Data\For_Testing") # 衛星CSV（単体）またはフォルダ
-    ap.add_argument("--kp", required=True, help="C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step01_Data_Analysis\Data\kpデータ_ALL(csv).csv") # Kp CSV
-    ap.add_argument("--out", required=True, help="C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step01_Data_Analysis\Output\For_Testing") # 出力フォルダ
+    ap.add_argument("--sat", required=True, help="衛星CSV（単体）またはフォルダ")
+    ap.add_argument("--kp", required=True, help="Kp CSV")
+    ap.add_argument("--out", required=True, help="出力フォルダ")
     args = ap.parse_args()
 
     sat_path = Path(args.sat)
