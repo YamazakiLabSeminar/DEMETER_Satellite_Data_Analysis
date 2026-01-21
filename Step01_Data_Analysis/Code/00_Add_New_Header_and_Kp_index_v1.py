@@ -148,6 +148,57 @@ def fill_missing_and_format(df_str: pd.DataFrame, int_cols: List[str], float_col
 
     return out
 
+def attach_kp_nearest(df_sat: pd.DataFrame, kp_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    df_sat: datetime列を持つ（衛星時刻）
+    kp_df : datetime列とKpIndex列を持つ（Kp時刻）
+    戻り値: df_sat に KpIndex を追加して返す
+    仕様: 衛星時刻がKpの2行の間なら、より近い時刻のKpを採用。
+         同距離なら「直前Kp」を採用（必要ならここを変更可）。
+    """
+    df_sat = df_sat.sort_values("datetime").reset_index(drop=True)
+    kp_sorted = kp_df.sort_values("datetime").reset_index(drop=True).copy()
+
+    # merge_asofで両側を取るため、Kp側の時刻列名を別名にする
+    kp2 = kp_sorted.rename(columns={"datetime": "kp_datetime"})
+
+    prev = pd.merge_asof(
+        df_sat[["datetime"]],
+        kp2,
+        left_on="datetime",
+        right_on="kp_datetime",
+        direction="backward",
+        allow_exact_matches=True,
+    )
+
+    nxt = pd.merge_asof(
+        df_sat[["datetime"]],
+        kp2,
+        left_on="datetime",
+        right_on="kp_datetime",
+        direction="forward",
+        allow_exact_matches=True,
+        suffixes=("", "_next"),
+    )
+
+    # 時刻差（秒）を計算（片側が無い場合は inf 扱い）
+    prev_diff = (df_sat["datetime"] - prev["kp_datetime"]).abs()
+    next_diff = (nxt["kp_datetime"] - df_sat["datetime"]).abs()
+
+    prev_diff = prev_diff.fillna(pd.Timedelta.max)
+    next_diff = next_diff.fillna(pd.Timedelta.max)
+
+    # 近い方を採用。同距離は prev（直前）を採用（<=）
+    use_prev = prev_diff <= next_diff
+
+    kp_index = pd.Series(np.nan, index=df_sat.index, dtype="float64")
+    kp_index[use_prev] = pd.to_numeric(prev.loc[use_prev, "KpIndex"], errors="coerce")
+    kp_index[~use_prev] = pd.to_numeric(nxt.loc[~use_prev, "KpIndex"], errors="coerce")
+
+    out = df_sat.copy()
+    out["KpIndex"] = kp_index
+    return out
+
 
 def process_one_orbit(sat_csv: Path, kp_df: pd.DataFrame, out_csv: Path) -> None:
     rows = read_demeter_orbit_csv_any_header(sat_csv)
@@ -165,15 +216,11 @@ def process_one_orbit(sat_csv: Path, kp_df: pd.DataFrame, out_csv: Path) -> None
     df_filled["datetime"] = parse_dt_from_sat(df_filled)
     df_filled = df_filled.sort_values("datetime").reset_index(drop=True)
 
-    merged = pd.merge_asof(
-        df_filled,
-        kp_df,
-        on="datetime",
-        direction="backward",
-        allow_exact_matches=True,
-    )
+    # Kp付与（近い方を採用）
+    df_filled = attach_kp_nearest(df_filled, kp_df)
+    merged = df_filled
 
-    merged = merged.drop(columns=["datetime"])
+    merged = merged = merged.drop(columns=["datetime"])
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     merged.to_csv(out_csv, index=False, encoding="utf-8")
     print(f"OK: {sat_csv.name} -> {out_csv}")
