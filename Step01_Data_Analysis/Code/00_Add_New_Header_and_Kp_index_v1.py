@@ -151,7 +151,7 @@ def kp_str_to_float(x) -> float:
 
 
 def load_kp_csv(kp_path: Path) -> pd.DataFrame:
-    kp_raw = pd.read_csv(kp_path, dtype=str)
+    kp_raw = pd.read_csv(kp_path, dtype=str, delimiter=sniff_delimiter(kp_path))
 
     # 念のため列名の空白を除去
     kp_raw.columns = [c.strip() for c in kp_raw.columns]
@@ -172,7 +172,7 @@ def load_kp_csv(kp_path: Path) -> pd.DataFrame:
     # ★ここを変更：kpを数値に変換してKpIndexにする
     kp_num = kp_raw["kp"].map(kp_str_to_float)
 
-    kp = pd.DataFrame({"datetime": dt, "KpIndex": kp_num}).dropna(subset=["datetime"])
+    kp = pd.DataFrame({"datetime": dt, "KpIndex": kp_num}).dropna(subset=["datetime", "KpIndex"])
     kp = kp.sort_values("datetime").reset_index(drop=True)
 
     # もしKpIndexがほぼNaNなら、ここで気づけるように警告
@@ -284,16 +284,18 @@ def process_one_orbit(sat_csv: Path, kp_df: pd.DataFrame, out_csv: Path) -> None
 
     # Kp付与（衛星時刻がKpの2行の間なら「早いKp」=直前Kp）
     df_filled["datetime"] = parse_dt_from_sat(df_filled)
-    df_filled = df_filled.sort_values("datetime").reset_index(drop=True)
+    df_filled = df_filled.dropna(subset=["datetime"]).sort_values("datetime").reset_index(drop=True)
 
     # Kp付与（近い方を採用）
     df_filled = attach_kp_nearest(df_filled, kp_df)
-    merged = df_filled
 
-    merged = merged = merged.drop(columns=["datetime"])
+    merged = df_filled.drop(columns=["datetime"])
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     merged.to_csv(out_csv, index=False, encoding="utf-8")
     print(f"OK: {sat_csv.name} -> {out_csv}")
+    filled_rate = merged["KpIndex"].notna().mean()
+    if filled_rate < 0.99:
+        print(f"[WARN] {sat_csv.name}: KpIndex filled rate = {filled_rate:.2%}")
 
 
 def iter_csv_files(p: Path) -> List[Path]:
