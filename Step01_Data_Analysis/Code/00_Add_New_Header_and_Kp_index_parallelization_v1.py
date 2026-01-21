@@ -23,29 +23,17 @@ F_MAX_HZ = Decimal("20000.0")
 N_BINS = int((F_MAX_HZ / STEP_HZ).to_integral_value(rounding=ROUND_HALF_UP))  # 1024
 
 
-def sniff_delimiter(path: Path, sample_bytes: int = 65536) -> str:
-    """CSV区切り文字を自動推定（失敗したら','）
-    ※スペースは列崩れを起こしやすいので候補から外す
-    """
-    with path.open("r", encoding="utf-8", errors="replace", newline="") as f:
-        sample = f.read(sample_bytes)
-    try:
-        dialect = csv.Sniffer().sniff(sample, delimiters=[",", "\t", ";"])
-        return dialect.delimiter
-    except Exception:
+def sniff_delimiter(path: Path, sample_bytes: int = 4096) -> str:
+    # 高速・軽量：カンマ優先、ダメならタブ/セミコロン
+    with path.open("r", encoding="utf-8", errors="replace") as f:
+        s = f.read(sample_bytes)
+    if s.count(",") >= 5:
         return ","
-
-
-def decimal_places(s: str) -> int:
-    t = (s or "").strip().lower()
-    if t == "" or t in {"nan", "none", "null"}:
-        return 0
-    if t[0] in "+-":
-        t = t[1:]
-    if "e" in t:
-        mant = t.split("e", 1)[0]
-        return len(mant.split(".", 1)[1]) if "." in mant else 0
-    return len(t.split(".", 1)[1]) if "." in t else 0
+    if s.count("\t") >= 5:
+        return "\t"
+    if s.count(";") >= 5:
+        return ";"
+    return ","
 
 
 def build_frequency_headers_1953_to_20000() -> List[str]:
@@ -60,39 +48,48 @@ FREQ_COLS = build_frequency_headers_1953_to_20000()
 ALL_COLS_OUT = BASE_COLS_OUT + FREQ_COLS  # 11 + 1024 = 1035
 
 
-def read_demeter_orbit_csv_any_header(path: Path) -> List[List[str]]:
-    """
-    先頭行が11列ヘッダでも、データ行が1035列でも、必ず全列を読む。
-    区切り文字は自動推定する（, / ; / tab）
-    """
+def read_demeter_orbit_as_df(path: Path) -> pd.DataFrame:
     delim = sniff_delimiter(path)
 
-    rows: List[List[str]] = []
-    with path.open("r", encoding="utf-8", errors="replace", newline="") as f:
-        reader = csv.reader(f, delimiter=delim)
-        first = next(reader, None)
-        if first is None:
-            return rows
+    # 1行目を見てヘッダ有無を判定
+    with path.open("r", encoding="utf-8", errors="replace") as f:
+        first_line = f.readline().strip()
 
-        # 先頭が文字（year,month,...）ならヘッダ扱いで捨てる
-        if len(first) >= 1 and first[0].strip().lower() in {"year", "yyyy"}:
-            pass
-        else:
-            rows.append(first)
+    has_header = first_line.lower().startswith("year") or first_line.lower().startswith("yyyy")
 
-        for r in reader:
-            rows.append(r)
+    if has_header:
+        dtype_map = {c: "string" for c in BASE_COLS_OUT}
+        for c in FREQ_COLS:
+            dtype_map[c] = "float64"
 
-    # 列数を 1035 に合わせる（足りなければ空を足す／多ければ切る）
-    out = []
-    exp = len(ALL_COLS_OUT)
-    for r in rows:
-        if len(r) < exp:
-            r = r + [""] * (exp - len(r))
-        elif len(r) > exp:
-            r = r[:exp]
-        out.append(r)
-    return out
+        df = pd.read_csv(path, sep=delim, engine="c", dtype=dtype_map)
+
+        # 列数合わせ（保険）
+        if df.shape[1] < len(ALL_COLS_OUT):
+            for i in range(df.shape[1], len(ALL_COLS_OUT)):
+                df[str(i)] = ""
+        df = df.iloc[:, :len(ALL_COLS_OUT)]
+        df.columns = ALL_COLS_OUT
+        return df
+
+
+    # ヘッダなし（DEMETER生データ想定）
+    dtype_map = {c: "string" for c in BASE_COLS_OUT}  # 先頭11列だけ文字
+    for c in FREQ_COLS:
+        dtype_map[c] = "float64"  # スペクトルは最初から数値
+
+    df = pd.read_csv(
+        path,
+        sep=delim,
+        header=None,
+        names=ALL_COLS_OUT,
+        usecols=range(len(ALL_COLS_OUT)),
+        engine="c",
+        dtype=dtype_map,
+    )
+
+    return df
+
 
 
 def parse_dt_from_sat(df: pd.DataFrame) -> pd.Series:
@@ -182,39 +179,47 @@ def load_kp_csv(kp_path: Path) -> pd.DataFrame:
     return kp
 
 
-def fill_missing_and_format(df_str: pd.DataFrame, int_cols: List[str], float_cols: List[str]) -> pd.DataFrame:
+# -----------------------------
+# 方針A：fragmentation回避版（ここが差分の本体）
+# -----------------------------
+def fill_missing_numeric_selective(
+    df_str: pd.DataFrame,
+    int_cols: List[str],
+    pos_cols: List[str],
+    spec_cols: List[str],
+) -> pd.DataFrame:
     """
-    欠損補完：同列の上下から線形補間（=平均含む）。端は最近傍で埋める。
-    桁数：列ごとに「観測された小数桁の最大」に揃えて文字列化。
+    要件：
+    - spec_cols（周波数スペクトル列）：空白セルが無い前提 → 生データのまま数値化（補間しない）
+      ※もし空白が混ざっても補間せず NaN のまま
+    - int_cols（year..milsecond）：空白セルは線形補間、最終的に整数(Int64)
+    - pos_cols（lat,lon,mlat,mlon）：空白セルは線形補間、小数点以下12桁にround
     """
     out = df_str.copy()
 
-    # 数値化
-    num = pd.DataFrame(index=out.index)
-    for c in int_cols + float_cols:
-        num[c] = pd.to_numeric(out[c].replace({"": np.nan, " ": np.nan}), errors="coerce")
+    # 1) スペクトル列：すでに read_csv で float64 読み込み済み（ここでは触らない）
+    #    ※もしヘッダありのファイル（dtype=str読み）も混ざるなら、念のため float に寄せる
+    if out[spec_cols].dtypes.iloc[0] == object or str(out[spec_cols].dtypes.iloc[0]).startswith("string"):
+        out[spec_cols] = out[spec_cols].replace({"": np.nan, " ": np.nan}).apply(pd.to_numeric, errors="coerce")
 
-    # 線形補間（両端も埋める）
+    # 2) 時刻＋位置列：まとめて数値化→補間（fragmentation回避）
+    cols_interp = int_cols + pos_cols
+    num = out[cols_interp].replace({"": np.nan, " ": np.nan})
+    for c in cols_interp:
+        num[c] = pd.to_numeric(num[c], errors="coerce")
+
     num2 = num.interpolate(method="linear", limit_direction="both")
 
-    # 小数桁（列ごと）
-    dec_max: Dict[str, int] = {}
-    for c in float_cols:
-        s = out[c].astype(str)
-        d = s.map(decimal_places)
-        mask = num[c].notna()
-        dec_max[c] = int(d[mask].max()) if mask.any() else 6
-
-    # int列は整数化
+    # 3) int列：整数化
     for c in int_cols:
-        out[c] = num2[c].round(0).astype("Int64").astype(str)
+        out[c] = num2[c].round(0).astype("Int64")
 
-    # float列は小数桁を揃えて出力
-    for c in float_cols:
-        places = max(dec_max[c], 0)
-        out[c] = num2[c].map(lambda x: f"{x:.{places}f}" if pd.notna(x) else "")
+    # 4) 位置列：小数12桁
+    for c in pos_cols:
+        out[c] = num2[c].astype(float).round(12)
 
     return out
+
 
 
 def attach_kp_nearest(df_sat: pd.DataFrame, kp_df: pd.DataFrame) -> pd.DataFrame:
@@ -235,16 +240,22 @@ def attach_kp_nearest(df_sat: pd.DataFrame, kp_df: pd.DataFrame) -> pd.DataFrame
 
 
 def process_one_orbit(sat_csv: Path, kp_df: pd.DataFrame, out_csv: Path) -> None:
-    rows = read_demeter_orbit_csv_any_header(sat_csv)
-    if not rows:
+    df = read_demeter_orbit_as_df(sat_csv)
+    if df is None or df.empty:
         raise ValueError(f"空ファイル: {sat_csv}")
 
-    df = pd.DataFrame(rows, columns=ALL_COLS_OUT)
-
     # 欠損補完
+    # 欠損補完（要件対応：スペクトルは補間しない）
     int_cols = ["year", "month", "day", "hour", "minute", "second", "milsecond"]
-    float_cols = ["lat", "lon", "mlat", "mlon"] + FREQ_COLS
-    df_filled = fill_missing_and_format(df, int_cols=int_cols, float_cols=float_cols)
+    pos_cols = ["lat", "lon", "mlat", "mlon"]
+    spec_cols = FREQ_COLS
+
+    df_filled = fill_missing_numeric_selective(
+        df,
+        int_cols=int_cols,
+        pos_cols=pos_cols,
+        spec_cols=spec_cols,
+    )
 
     # datetime作成 + NaT除去
     df_filled["datetime"] = parse_dt_from_sat(df_filled)
@@ -260,7 +271,6 @@ def process_one_orbit(sat_csv: Path, kp_df: pd.DataFrame, out_csv: Path) -> None
     filled_rate = merged["KpIndex"].notna().mean()
     if filled_rate < 0.99:
         print(f"[WARN] {sat_csv.name}: KpIndex filled rate = {filled_rate:.2%}")
-    # print(f"OK: {sat_csv.name} -> {out_csv}")
 
 
 def iter_csv_files(p: Path) -> List[Path]:
@@ -311,7 +321,6 @@ def main():
                 next_pct = pct + 1
         return
 
-
     # 並列（任意）
     jobs = [(str(f), str(Path(args.kp)), str(out_dir / f.name)) for f in files]
 
@@ -330,7 +339,6 @@ def main():
             if pct >= next_pct:
                 print(f"[PROGRESS] {pct}% ({done}/{total})")
                 next_pct = pct + 1
-
 
 
 if __name__ == "__main__":
