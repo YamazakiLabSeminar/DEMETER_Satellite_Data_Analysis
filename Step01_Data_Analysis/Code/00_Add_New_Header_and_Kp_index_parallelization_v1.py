@@ -260,7 +260,7 @@ def process_one_orbit(sat_csv: Path, kp_df: pd.DataFrame, out_csv: Path) -> None
     filled_rate = merged["KpIndex"].notna().mean()
     if filled_rate < 0.99:
         print(f"[WARN] {sat_csv.name}: KpIndex filled rate = {filled_rate:.2%}")
-    print(f"OK: {sat_csv.name} -> {out_csv}")
+    # print(f"OK: {sat_csv.name} -> {out_csv}")
 
 
 def iter_csv_files(p: Path) -> List[Path]:
@@ -296,20 +296,41 @@ def main():
     # 逐次（最も安定）
     if args.workers <= 1:
         kp_df = load_kp_csv(Path(args.kp))
+
+        total = len(files)
+        done = 0
+        next_pct = 1
+        print(f"[PROGRESS] 0% (0/{total})")
+
         for f in files:
             process_one_orbit(f, kp_df, out_dir / f.name)
+            done += 1
+            pct = int(done * 100 / total) if total else 100
+            if pct >= next_pct:
+                print(f"[PROGRESS] {pct}% ({done}/{total})")
+                next_pct = pct + 1
         return
+
 
     # 並列（任意）
     jobs = [(str(f), str(Path(args.kp)), str(out_dir / f.name)) for f in files]
+
+    total = len(jobs)
+    done = 0
+    next_pct = 1
+    print(f"[PROGRESS] 0% (0/{total})")
+
     with ProcessPoolExecutor(max_workers=args.workers) as ex:
         futures = [ex.submit(_worker, j) for j in jobs]
-        done = 0
+
         for fut in as_completed(futures):
+            _ = fut.result()  # 例外があればここで止まる（安全）
             done += 1
-            last = fut.result()  # 例外があればここで上がる
-            if done % 50 == 0 or done == len(futures):
-                print(f"[PROGRESS] {done}/{len(futures)} done (last: {Path(last).name})")
+            pct = int(done * 100 / total) if total else 100
+            if pct >= next_pct:
+                print(f"[PROGRESS] {pct}% ({done}/{total})")
+                next_pct = pct + 1
+
 
 
 if __name__ == "__main__":
