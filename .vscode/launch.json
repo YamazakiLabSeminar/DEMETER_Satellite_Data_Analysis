@@ -8,9 +8,10 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "args": [
-        "--sat", "C:/Users/nzy27/Documents/Github/DEMETER_Satellite_Data_Analysis/Step01_Data_Analysis/Data/For_Testing",
+        "--sat", "F:/01_EFdata",
         "--kp",  "C:/Users/nzy27/Documents/Github/DEMETER_Satellite_Data_Analysis/Step01_Data_Analysis/Data/kpデータ_ALL(csv).csv",
-        "--out", "C:/Users/nzy27/Documents/Github/DEMETER_Satellite_Data_Analysis/Step01_Data_Analysis/Output/For_Testing"
+        "--out", "E:/02_Add_New_Header_and_Kp_index",
+        "--workers", "1"
       ]
     }
   ]
