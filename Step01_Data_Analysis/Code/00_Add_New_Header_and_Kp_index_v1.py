@@ -22,6 +22,17 @@ F_MAX_HZ = Decimal("20000.0")
 N_BINS = int((F_MAX_HZ / STEP_HZ).to_integral_value(rounding=ROUND_HALF_UP))  # 1024
 
 
+def sniff_delimiter(path: Path, sample_bytes: int = 65536) -> str:
+    """CSV区切り文字を自動推定（失敗したら','）"""
+    with path.open("r", encoding="utf-8", errors="replace", newline="") as f:
+        sample = f.read(sample_bytes)
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters=[",", "\t", ";", " "])
+        return dialect.delimiter
+    except Exception:
+        return ","
+
+
 def decimal_places(s: str) -> int:
     t = (s or "").strip().lower()
     if t == "" or t in {"nan", "none", "null"}:
@@ -49,10 +60,13 @@ ALL_COLS_OUT = BASE_COLS_OUT + FREQ_COLS  # 11 + 1024 = 1035
 def read_demeter_orbit_csv_any_header(path: Path) -> List[List[str]]:
     """
     先頭行が11列ヘッダでも、データ行が1035列でも、必ず全列を読む。
+    区切り文字は自動推定する（, / ; / tab / space）
     """
+    delim = sniff_delimiter(path)
+
     rows: List[List[str]] = []
     with path.open("r", encoding="utf-8", errors="replace", newline="") as f:
-        reader = csv.reader(f, delimiter=",")
+        reader = csv.reader(f, delimiter=delim)
         first = next(reader, None)
         if first is None:
             return rows
@@ -78,6 +92,7 @@ def read_demeter_orbit_csv_any_header(path: Path) -> List[List[str]]:
     return out
 
 
+
 def parse_dt_from_sat(df: pd.DataFrame) -> pd.Series:
     ms = pd.to_numeric(df["milsecond"], errors="coerce").fillna(0).astype(np.int64)
     dt = pd.to_datetime(
@@ -94,8 +109,53 @@ def parse_dt_from_sat(df: pd.DataFrame) -> pd.Series:
     return dt + pd.to_timedelta(ms, unit="ms")
 
 
+def kp_str_to_float(x) -> float:
+    """
+    Kpの表記を数値へ。
+    例:
+      "3"   -> 3.0
+      "3.33"-> 3.33
+      "3o"  -> 3.0
+      "3+"  -> 3.33
+      "3-"  -> 2.67
+    """
+    if x is None:
+        return np.nan
+    s = str(x).strip().lower()
+    if s == "" or s in {"nan", "none", "null"}:
+        return np.nan
+
+    # 既に数値っぽい場合
+    try:
+        return float(s)
+    except Exception:
+        pass
+
+    # 3分割表記（o, +, -）
+    # "o" はそのまま、"+" は +1/3、"-" は -1/3
+    base_part = s[:-1]
+    mod = s[-1]
+    try:
+        base = float(base_part)
+    except Exception:
+        return np.nan
+
+    if mod == "o":
+        return base
+    if mod == "+":
+        return base + (1.0 / 3.0)
+    if mod == "-":
+        return base - (1.0 / 3.0)
+
+    return np.nan
+
+
 def load_kp_csv(kp_path: Path) -> pd.DataFrame:
     kp_raw = pd.read_csv(kp_path, dtype=str)
+
+    # 念のため列名の空白を除去
+    kp_raw.columns = [c.strip() for c in kp_raw.columns]
+
     # 想定列：year month day hour minute sec milsec kp
     dt = pd.to_datetime(
         dict(
@@ -109,8 +169,17 @@ def load_kp_csv(kp_path: Path) -> pd.DataFrame:
         errors="coerce",
     ) + pd.to_timedelta(pd.to_numeric(kp_raw["milsec"], errors="coerce").fillna(0).astype(np.int64), unit="ms")
 
-    kp = pd.DataFrame({"datetime": dt, "KpIndex": kp_raw["kp"]}).dropna(subset=["datetime"])
+    # ★ここを変更：kpを数値に変換してKpIndexにする
+    kp_num = kp_raw["kp"].map(kp_str_to_float)
+
+    kp = pd.DataFrame({"datetime": dt, "KpIndex": kp_num}).dropna(subset=["datetime"])
     kp = kp.sort_values("datetime").reset_index(drop=True)
+
+    # もしKpIndexがほぼNaNなら、ここで気づけるように警告
+    nan_rate = kp["KpIndex"].isna().mean()
+    if nan_rate > 0.5:
+        print(f"[WARN] KpIndexのNaN率が高いです: {nan_rate:.1%}  (kp列の表記を確認してください)")
+
     return kp
 
 
@@ -192,8 +261,9 @@ def attach_kp_nearest(df_sat: pd.DataFrame, kp_df: pd.DataFrame) -> pd.DataFrame
     use_prev = prev_diff <= next_diff
 
     kp_index = pd.Series(np.nan, index=df_sat.index, dtype="float64")
-    kp_index[use_prev] = pd.to_numeric(prev.loc[use_prev, "KpIndex"], errors="coerce")
-    kp_index[~use_prev] = pd.to_numeric(nxt.loc[~use_prev, "KpIndex"], errors="coerce")
+    kp_index[use_prev] = prev.loc[use_prev, "KpIndex"].astype(float)
+    kp_index[~use_prev] = nxt.loc[~use_prev, "KpIndex"].astype(float)
+
 
     out = df_sat.copy()
     out["KpIndex"] = kp_index
