@@ -10,6 +10,7 @@ Visual Studio Code Python 3.12.1
  	- matplotlib 3.8.0
 
 # 3.フォルダ構成
+ローカルでのプロジェクトのは以下のように：
 ```text
 卒研解析/  （プロジェクトの親フォルダ）
 ├─ README.md                # 使い方メモ（自分用でOK）
@@ -35,6 +36,28 @@ Visual Studio Code Python 3.12.1
 └─ logs/
    └─ run_YYYYMMDD_HHMM.log # 実行ログ（落ちたファイル等を記録）
 ```
+
+入力データは以下のように：
+```text
+inputs/	（入力データの親フォルダ）
+├─ 00_EFdata_test/
+├─ EFdata/
+│ 
+├─ external/				# Kp指数、地震カタログなど外部データ
+│ 
+└─ interim/					# 中間生成物（容量が許せば）
+```
+
+出力データは以下のように：
+```text
+outputs/		(出力データの親フォルダ)
+├─ tables/					# CSV結果（地震リスト、抽出軌道リストなど）	
+│ 
+├─ figures/					# PNG図（Wordに貼る用）
+│ 
+└─ reports/					# まとめ（任意）
+```
+
 - 解析を行う前に、まず、フォルダ構成の構築が大事である。必ず、これからやる。
 
 # 4.パス管理
