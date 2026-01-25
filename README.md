@@ -9,7 +9,7 @@ Visual Studio Code Python 3.12.1
  	- numpy 1.26.4
  	- matplotlib 3.8.0
 
-# フォルダ構成
+# 00_フォルダ構成
 卒研解析/  （プロジェクトの親フォルダ）
 ├─ README.md                # 使い方メモ（自分用でOK）
 ├─ requirements.txt         # 必要ライブラリ一覧
@@ -27,7 +27,7 @@ Visual Studio Code Python 3.12.1
 │  ├─ __init__.py
 │  ├─ main.py               # 入口（ここ叩けば一連が動く）
 │  ├─ paths.py              # パス管理（data/rawとかを一括で扱う）
-│  ├─ io_demeter.py          # DEMETER CSV 読み込み
+│  ├─ io_demeter.py         # DEMETER CSV 読み込み
 │  ├─ eq_catalog.py         # 地震カタログ処理・デクラスタリング
 │  ├─ orbit_extract.py      # 地震軌道抽出（330km & 4h）
 │  ├─ timeseries.py         # 切り出し・SEA・移動平均
@@ -41,3 +41,7 @@ Visual Studio Code Python 3.12.1
 │
 └─ logs/
    └─ run_YYYYMMDD_HHMM.log # 実行ログ（落ちたファイル等を記録）
+
+
+- 
+# パス管理
