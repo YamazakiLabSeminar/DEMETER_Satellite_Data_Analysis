@@ -30,19 +30,25 @@ def cumulative_comparison_plots(
     df_declus['cumulative_count'] = range(1, len(df_declus)+1)
 
     # プロット
-    plt.figure(figsize=(12, 6))
+    #==================================================================================================================================
+    plt.figure(figsize=(78/25.4, 60/25.4))
+    ## フォント設定（MS明朝、黒、9pt）
+    plt.rcParams.update({
+        "font.family": "MS Mincho",
+        "font.size": 9,
+        "text.color": "black",
+    })
+
     plt.plot(df_org['datetime'], df_org['cumulative_count'], label='Original (all earthquakes)', color='red', linewidth=1.5)
     plt.plot(df_declus['datetime'], df_declus['cumulative_count'], label='Declustring (all earthquakes)', color='blue', linewidth=1.5)
 
     plt.xlabel('Date')
-    plt.ylabel('Cumulative Number (M4.8 above, Depth 40km below )')
-    plt.title('Comparison of Cumulative Earthquake Counts\nBefore and After Declustring(30km-30days)')
+    plt.ylabel('Cumulative Number')
     plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
+    plt.tight_layout(pad=0.5)
 
     # 保存
-    plt.savefig(save_path, dpi=300)
+    plt.savefig(save_path, dpi=300, bbox_inches="tight", pad_inches=0.02)
     plt.show()
 
 

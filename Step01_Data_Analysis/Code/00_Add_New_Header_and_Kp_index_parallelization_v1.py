@@ -24,16 +24,19 @@ N_BINS = int((F_MAX_HZ / STEP_HZ).to_integral_value(rounding=ROUND_HALF_UP))  # 
 
 
 def sniff_delimiter(path: Path, sample_bytes: int = 4096) -> str:
-    # 高速・軽量：カンマ優先、ダメならタブ/セミコロン
+    # 高速・軽量：カンマ/タブ/セミコロンを簡易判定
     with path.open("r", encoding="utf-8", errors="replace") as f:
         s = f.read(sample_bytes)
-    if s.count(",") >= 5:
-        return ","
-    if s.count("\t") >= 5:
+    # 行あたり複数回出てくるものを優先（閾値は雑でOK）
+    c = s.count(",")
+    t = s.count("\t")
+    sc = s.count(";")
+    if t >= c and t >= sc and t >= 5:
         return "\t"
-    if s.count(";") >= 5:
+    if sc >= c and sc >= t and sc >= 5:
         return ";"
     return ","
+
 
 
 def build_frequency_headers_1953_to_20000() -> List[str]:
@@ -58,18 +61,19 @@ def read_demeter_orbit_as_df(path: Path) -> pd.DataFrame:
     has_header = first_line.lower().startswith("year") or first_line.lower().startswith("yyyy")
 
     if has_header:
-        dtype_map = {c: "string" for c in BASE_COLS_OUT}
-        for c in FREQ_COLS:
-            dtype_map[c] = "float64"
+        df = pd.read_csv(path, sep=delim, engine="c")  # まず素直に読む（列名を活かす）
+        df.columns = [str(c).strip() for c in df.columns]
 
-        df = pd.read_csv(path, sep=delim, engine="c", dtype=dtype_map)
+        need = len(ALL_COLS_OUT)
 
-        # 列数合わせ（保険）
-        if df.shape[1] < len(ALL_COLS_OUT):
-            for i in range(df.shape[1], len(ALL_COLS_OUT)):
-                df[str(i)] = ""
-        df = df.iloc[:, :len(ALL_COLS_OUT)]
-        df.columns = ALL_COLS_OUT
+        # 列名で不足分を補う（まとめて追加）
+        missing = [c for c in ALL_COLS_OUT if c not in df.columns]
+        if missing:
+            df = pd.concat([df, pd.DataFrame(np.nan, index=df.index, columns=missing)], axis=1)
+
+        # 列順も列名で揃える（ズレ防止：ここが重要）
+        df = df.reindex(columns=ALL_COLS_OUT)
+
         return df
 
 
@@ -93,19 +97,22 @@ def read_demeter_orbit_as_df(path: Path) -> pd.DataFrame:
 
 
 def parse_dt_from_sat(df: pd.DataFrame) -> pd.Series:
-    ms = pd.to_numeric(df["milsecond"], errors="coerce").fillna(0).astype(np.int64)
+    # すべて「数値化 → 欠損補完(0) → int64」へ寄せる（NA耐性）
+    y  = pd.to_numeric(df["year"], errors="coerce").fillna(0).astype("int64")
+    mo = pd.to_numeric(df["month"], errors="coerce").fillna(0).astype("int64")
+    d  = pd.to_numeric(df["day"], errors="coerce").fillna(0).astype("int64")
+    h  = pd.to_numeric(df["hour"], errors="coerce").fillna(0).astype("int64")
+    mi = pd.to_numeric(df["minute"], errors="coerce").fillna(0).astype("int64")
+    s  = pd.to_numeric(df["second"], errors="coerce").fillna(0).astype("int64")
+
+    ms = pd.to_numeric(df["milsecond"], errors="coerce").fillna(0).astype("int64")
+
     dt = pd.to_datetime(
-        dict(
-            year=pd.to_numeric(df["year"], errors="coerce"),
-            month=pd.to_numeric(df["month"], errors="coerce"),
-            day=pd.to_numeric(df["day"], errors="coerce"),
-            hour=pd.to_numeric(df["hour"], errors="coerce"),
-            minute=pd.to_numeric(df["minute"], errors="coerce"),
-            second=pd.to_numeric(df["second"], errors="coerce"),
-        ),
+        dict(year=y, month=mo, day=d, hour=h, minute=mi, second=s),
         errors="coerce",
     )
     return dt + pd.to_timedelta(ms, unit="ms")
+
 
 
 def kp_str_to_float(x) -> float:
@@ -204,9 +211,7 @@ def fill_missing_numeric_selective(
 
     # 2) 時刻＋位置列：まとめて数値化→補間（fragmentation回避）
     cols_interp = int_cols + pos_cols
-    num = out[cols_interp].replace({"": np.nan, " ": np.nan})
-    for c in cols_interp:
-        num[c] = pd.to_numeric(num[c], errors="coerce")
+    num = out[cols_interp].replace({"": np.nan, " ": np.nan}).apply(pd.to_numeric, errors="coerce")
 
     num2 = num.interpolate(method="linear", limit_direction="both")
 
@@ -241,6 +246,10 @@ def attach_kp_nearest(df_sat: pd.DataFrame, kp_df: pd.DataFrame) -> pd.DataFrame
 
 def process_one_orbit(sat_csv: Path, kp_df: pd.DataFrame, out_csv: Path) -> None:
     df = read_demeter_orbit_as_df(sat_csv)
+    print("[DEBUG]", sat_csv.name, "shape=", df.shape)
+    print("[DEBUG] first row base cols:", df[BASE_COLS_OUT].head(1).to_dict("records"))
+    print("[DEBUG] delim=", sniff_delimiter(sat_csv))
+
     if df is None or df.empty:
         raise ValueError(f"空ファイル: {sat_csv}")
 

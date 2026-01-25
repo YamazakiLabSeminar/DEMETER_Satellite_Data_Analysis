@@ -10,8 +10,8 @@
       "args": [
         "--sat", "F:/01_EFdata_test",
         "--kp",  "C:/Users/nzy27/Documents/Github/DEMETER_Satellite_Data_Analysis/Step01_Data_Analysis/Data/kpデータ_ALL(csv).csv",
-        "--out", "E:/02_Add_New_Header_and_Kp_index_text",
-        "--workers", "2"
+        "--out", "E:/02_Add_New_Header_and_Kp_index_test",
+        "--workers", "1"
       ]
     }
   ]
