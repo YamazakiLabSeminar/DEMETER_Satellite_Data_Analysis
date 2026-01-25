@@ -48,4 +48,13 @@ Visual Studio Code Python 3.12.1
 # 4.パス管理
 ## 4.1 動作確認
 簡単なコードで、Root(親フォルダ)の設定及び確認を```src/main.py```で行う。
+```
+from pathlib import Path
+from datetime import datetime
+
+ROOT = Path(__file__).resolve().parents[1]
+print("Project root:", ROOT)
+print("Now:", datetime.now())
+
+```
 
