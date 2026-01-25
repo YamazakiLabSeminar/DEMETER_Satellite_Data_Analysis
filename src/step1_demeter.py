@@ -191,8 +191,8 @@ def step1_process_one_file(
     # 2) 数値化（メタ11列 + 周波数1024列）
     freq_cols = make_freq_cols()
     to_numeric_inplace(df, META_COLS + freq_cols)
+
     df = df.copy()
-    df["if_filled"] = meta_all_nan
 
     # 3) 欠損行フラグ（元々メタが全欠損の行を True にする）
     meta_all_nan = df[META_COLS].isna().all(axis=1)
