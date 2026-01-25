@@ -21,20 +21,17 @@ Visual Studio Code Python 3.12.1
 ├─ configs/
 │  └─ config.yaml           # 実験条件（距離330km、4時間、窓幅±50s、閾値など）
 │
-├─ src/                     # Pythonコード本体
-│  ├─ __init__.py
-│  ├─ main.py               # 入口（ここ叩けば一連が動く）
-│  ├─ paths.py              # パス管理（data/rawとかを一括で扱う）
-│  ├─ io_demeter.py         # DEMETER CSV 読み込み
-│  ├─ eq_catalog.py         # 地震カタログ処理・デクラスタリング
-│  ├─ orbit_extract.py      # 地震軌道抽出（330km & 4h）
-│  ├─ timeseries.py         # 切り出し・SEA・移動平均
-│  ├─ anomaly.py            # 相関・異常判定
-│  └─ eval_molchan.py       # 警報率/予知率/Molchan
-│
-│
-└─ logs/
-   └─ run_YYYYMMDD_HHMM.log # 実行ログ（落ちたファイル等を記録）
+└─ src/                     # Pythonコード本体
+	├─ __init__.py
+	├─ main.py               # 入口（ここ叩けば一連が動く）
+	├─ paths.py              # パス管理（data/rawとかを一括で扱う）
+	├─ io_demeter.py         # DEMETER CSV 読み込み
+	├─ eq_catalog.py         # 地震カタログ処理・デクラスタリング
+	├─ orbit_extract.py      # 地震軌道抽出（330km & 4h）
+	├─ timeseries.py         # 切り出し・SEA・移動平均
+	├─ anomaly.py            # 相関・異常判定
+	└─ eval_molchan.py       # 警報率/予知率/Molchan
+
 ```
 
 入力データは以下のように：
@@ -55,7 +52,10 @@ outputs/		(出力データの親フォルダ)
 │ 
 ├─ figures/					# PNG図（Wordに貼る用）
 │ 
-└─ reports/					# まとめ（任意）
+├─ reports/					# まとめ（任意）
+│
+└─ logs/
+   └─ run_YYYYMMDD_HHMM.log # 実行ログ（落ちたファイル等を記録）
 ```
 
 - 解析を行う前に、まず、フォルダ構成の構築が大事である。必ず、これからやる。
@@ -144,5 +144,69 @@ def main():
 
 if __name__ == "__main__":
     main()
-	
+
 ```
+
+# 5. ログ入れ
+巨大データ解析は、「どこで落ちたか、「何件処理したか」が命なので、ここを固める必要がある。
+## 5.1 ```src/logger_setup.py```を新規作成
+```
+from __future__ import annotations
+
+import logging
+from datetime import datetime
+from pathlib import Path
+
+
+def setup_logger(log_dir: Path, name: str = "demeter") -> logging.Logger:
+    """
+    log_dir 配下にログファイルを作り、コンソール(画面)にも表示するロガーを返す。
+    """
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    # 例: run_20260126_153012.log みたいなファイル名になる
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_path = log_dir / f"run_{timestamp}.log"
+
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+
+    # 二重に同じログが出ないようにする（再実行時に重要）
+    if logger.handlers:
+        return logger
+
+    fmt = logging.Formatter(
+        fmt="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    # 1. ログファイルへ出力する設定
+    file_handler = logging.FileHandler(log_path, encoding="utf-8")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(fmt)
+
+    # 2. 画面（ターミナル）へ出力する設定
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(fmt)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
+
+    logger.info("Logger initialized")
+    logger.info(f"log file: {log_path}")
+
+    return logger
+
+```
+
+```
+import logging
+```
+- Python標準の「ログ出力」道具。``` print() ```より強い（ファイルに残せる、重要度レベルがある）。
+
+```
+def setup_logger(log_dir: Path, name: str = "demeter") -> logging.Logger:
+```
+- 「ログを準備して、使える logger を返す関数」を作ってる。
+- ```log_dir``` はログを保存するフォルダのパス。
