@@ -16,10 +16,6 @@ Visual Studio Code Python 3.12.1
 ├─ requirements.txt         # 必要ライブラリ一覧
 ├─ .gitignore               # 出力や巨大データをGitに入れない設定
 │
-├─ data/
-│  ├─ raw/                  # 生データ（絶対に書き換えない）
-│  ├─ external/             # Kp指数、地震カタログなど外部データ
-│  └─ interim/              # 中間生成物（任意：容量がきつければ無しでもOK）
 │
 ├─ configs/
 │  └─ config.yaml           # 実験条件（距離330km、4時間、窓幅±50s、閾値など）
@@ -35,10 +31,6 @@ Visual Studio Code Python 3.12.1
 │  ├─ anomaly.py            # 相関・異常判定
 │  └─ eval_molchan.py       # 警報率/予知率/Molchan
 │
-├─ outputs/
-│  ├─ tables/               # CSV結果（地震リスト、抽出軌道リストなど）
-│  ├─ figures/              # PNG図（Wordに貼る用）
-│  └─ reports/              # まとめ（任意）
 │
 └─ logs/
    └─ run_YYYYMMDD_HHMM.log # 実行ログ（落ちたファイル等を記録）
