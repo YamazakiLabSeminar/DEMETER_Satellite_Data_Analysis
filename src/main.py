@@ -1,7 +1,13 @@
-from pathlib import Path
-from datetime import datetime
+from paths import PROJECT_ROOT, RAW_DIR, OUT_ROOT, TABLES_DIR, FIGURES_DIR, LOGS_DIR, ensure_dirs
 
-ROOT = Path(__file__).resolve().parents[1]
+def main():
+    ensure_dirs()
+    print("PROJECT_ROOT:", PROJECT_ROOT)
+    print("RAW_DIR:", RAW_DIR)
+    print("OUT_ROOT:", OUT_ROOT)
+    print("TABLES_DIR:", TABLES_DIR)
+    print("FIGURES_DIR:", FIGURES_DIR)
+    print("LOGS_DIR:", LOGS_DIR)
 
-print("Project root:", ROOT)
-print("Now:", datetime.now())
+if __name__ == "__main__":
+    main()
