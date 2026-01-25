@@ -10,6 +10,7 @@ Visual Studio Code Python 3.12.1
  	- matplotlib 3.8.0
 
 # 00_フォルダ構成
+sudo apt install tree
 .
 ├── 卒研解析/  （プロジェクトの親フォルダ）
 ├── ├─ README.md                # 使い方メモ（自分用でOK）
