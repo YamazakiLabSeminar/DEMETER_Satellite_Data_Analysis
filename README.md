@@ -11,39 +11,5 @@ Visual Studio Code Python 3.12.1
 
 # 00_フォルダ構成
 sudo apt install tree
-.
-├── 卒研解析/  （プロジェクトの親フォルダ）
-├── ├─ README.md                # 使い方メモ（自分用でOK）
-├── ├─ requirements.txt         # 必要ライブラリ一覧
-├── ├─ .gitignore               # 出力や巨大データをGitに入れない設定
-├── │
-├── ├─ data/
-├── │  ├─ raw/                  # 生データ（絶対に書き換えない）
-├── │  ├─ external/             # Kp指数、地震カタログなど外部データ
-├── │  └─ interim/              # 中間生成物（任意：容量がきつければ無しでもOK）
-├── │
-├── ├─ configs/
-├── │  └─ config.yaml           # 実験条件（距離330km、4時間、窓幅±50s、閾値など）
-├── │
-├── ├─ src/                     # Pythonコード本体
-├── │  ├─ __init__.py
-├── │  ├─ main.py               # 入口（ここ叩けば一連が動く）
-├── │  ├─ paths.py              # パス管理（data/rawとかを一括で扱う）
-├── │  ├─ io_demeter.py         # DEMETER CSV 読み込み
-├── │  ├─ eq_catalog.py         # 地震カタログ処理・デクラスタリング
-├── │  ├─ orbit_extract.py      # 地震軌道抽出（330km & 4h）
-├── │  ├─ timeseries.py         # 切り出し・SEA・移動平均
-├── │  ├─ anomaly.py            # 相関・異常判定
-├── │  └─ eval_molchan.py       # 警報率/予知率/Molchan
-├── │
-├── ├─ outputs/
-├── │  ├─ tables/               # CSV結果（地震リスト、抽出軌道リストなど）
-├── │  ├─ figures/              # PNG図（Wordに貼る用）
-├── │  └─ reports/              # まとめ（任意）
-├── │
-└── └─ logs/
-    └── └─ run_YYYYMMDD_HHMM.log # 実行ログ（落ちたファイル等を記録）
-
-
-- 
+tree
 # パス管理
