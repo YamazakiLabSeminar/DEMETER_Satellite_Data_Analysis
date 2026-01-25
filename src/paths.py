@@ -10,7 +10,7 @@ RAW_ROOT = Path(r"F:")  # 例：SSD1
 OUT_ROOT = Path(r"E:")  # 例：SSD2
 
 # --- よく使うフォルダ（RAW側）---
-RAW_DIR = RAW_ROOT / "EFdata_test"              # 例：E:\DEMETER_RAW\csv に全軌道CSVがある想定
+RAW_DIR = RAW_ROOT / "01_EFdata"              # 例：E:\DEMETER_RAW\csv に全軌道CSVがある想定
 EXTERNAL_DIR = RAW_ROOT / "external"    # 例：Kpや地震カタログをここに置く
 INTERIM_DIR = OUT_ROOT / "interim"      # 中間生成物（容量が許せば）
 TABLES_DIR = OUT_ROOT / "tables"        # 結果CSV
