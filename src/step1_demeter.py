@@ -100,7 +100,7 @@ def interpolate_datetime_methodB(dt: pd.Series) -> pd.Series:
     - 補間後に datetime に戻す
     """
     # datetime → ns数値（NaTはNaNにしたいので一旦floatへ）
-    dt_ns = dt.view("int64").astype("float64")  # NaTは最小値になるので後でNaN化する
+    dt_ns = dt.astype("int64").astype("float64")  # NaTは最小値になるので後でNaN化する
     # NaTをNaNに直す（NaTのint64は -9223372036854775808 ）
     dt_ns[dt.isna()] = np.nan
 
@@ -191,6 +191,8 @@ def step1_process_one_file(
     # 2) 数値化（メタ11列 + 周波数1024列）
     freq_cols = make_freq_cols()
     to_numeric_inplace(df, META_COLS + freq_cols)
+    df = df.copy()
+    df["if_filled"] = meta_all_nan
 
     # 3) 欠損行フラグ（元々メタが全欠損の行を True にする）
     meta_all_nan = df[META_COLS].isna().all(axis=1)
