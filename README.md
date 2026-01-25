@@ -200,13 +200,23 @@ def setup_logger(log_dir: Path, name: str = "demeter") -> logging.Logger:
 
 ```
 
+## 5.2 ログ対応確認
 ```
-import logging
-```
-- Python標準の「ログ出力」道具。``` print() ```より強い（ファイルに残せる、重要度レベルがある）。
+from paths import LOGS_DIR, ensure_dirs
+from logger_setup import setup_logger
+
+
+def main():
+    ensure_dirs()
+    logger = setup_logger(LOGS_DIR)
+
+    logger.info("Start analysis (step0)")
+    logger.info("This is a test log message.")
+    logger.warning("This is a warning example (not an error).")
+    logger.info("Finish step0")
+
+
+if __name__ == "__main__":
+    main()
 
 ```
-def setup_logger(log_dir: Path, name: str = "demeter") -> logging.Logger:
-```
-- 「ログを準備して、使える logger を返す関数」を作ってる。
-- ```log_dir``` はログを保存するフォルダのパス。

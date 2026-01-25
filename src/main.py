@@ -1,15 +1,16 @@
-from paths import PROJECT_ROOT, RAW_ROOT, RAW_DIR, OUT_ROOT, INTERIM_DIR, TABLES_DIR, FIGURES_DIR, LOGS_DIR, ensure_dirs
+from paths import LOGS_DIR, ensure_dirs
+from logger_setup import setup_logger
+
 
 def main():
     ensure_dirs()
-    print("PROJECT_ROOT:", PROJECT_ROOT)
-    print("RAW_ROOT:", RAW_ROOT)
-    print("OUT_ROOT:", OUT_ROOT)
-    print("RAW_DIR:", RAW_DIR)
-    print("INTERIM_DIR:", INTERIM_DIR)
-    print("TABLES_DIR:", TABLES_DIR)
-    print("FIGURES_DIR:", FIGURES_DIR)
-    print("LOGS_DIR:", LOGS_DIR)
+    logger = setup_logger(LOGS_DIR)
+
+    logger.info("Start analysis (step0)")
+    logger.info("This is a test log message.")
+    logger.warning("This is a warning example (not an error).")
+    logger.info("Finish step0")
+
 
 if __name__ == "__main__":
     main()
