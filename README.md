@@ -88,3 +88,61 @@ print("Now:", datetime.now())
 
 ```
 という意味をする。
+
+## 4.2 パスの設定
+``` paths.py ```で、フォルダ構造のように、「どこにデータがあって、どこに出力するか」を全部一貫して扱える。
+### 1. パス設定
+```
+from pathlib import Path
+
+# 1. プロジェクトのROOT（コードやconfigsを置く場所）
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+# 2. 生データの場所（SSD1）←ここだけ自分の環境に合わせて書き換える
+RAW_ROOT = Path(r"E:\DEMETER_RAW")  # 例：SSD1
+
+# 3. 出力の場所（SSD2）←ここだけ自分の環境に合わせて書き換える
+OUT_ROOT = Path(r"F:\DEMETER_OUT")  # 例：SSD2
+
+# --- よく使うフォルダ（RAW側）---
+RAW_DIR = RAW_ROOT / "csv"              # 例：E:\DEMETER_RAW\csv に全軌道CSVがある想定
+EXTERNAL_DIR = RAW_ROOT / "external"    # 例：Kpや地震カタログをここに置く
+INTERIM_DIR = OUT_ROOT / "interim"      # 中間生成物（容量が許せば）
+TABLES_DIR = OUT_ROOT / "tables"        # 結果CSV
+LOGS_DIR = OUT_ROOT / "logs"            # ログもSSD2にまとめる（推奨）
+FIGURES_DIR = OUT_ROOT / "figures"      # Word貼り付け用PNGもここ（推奨）
+
+def ensure_dirs() -> None:
+    """必要フォルダを全部作る（既に存在してもOK）。"""
+    for d in [EXTERNAL_DIR, INTERIM_DIR, TABLES_DIR, LOGS_DIR, FIGURES_DIR]:
+        d.mkdir(parents=True, exist_ok=True)
+
+```
+
+``` def ensure_dirs() -> None: ```
+- 「フォルダがなければ作成する」ための関数を定義した。
+
+``` 
+for d in [ . . .]:
+	d.mkdir(parents=True, exist_ok=True)
+```
+- ``` parents=True ```：途中のフォルダもまとめて作る。
+- ``` exist_ok=True ```：すでにあってもエラーにしない。
+### 2. 動作確認
+``` src/main.py ```を更新てフォルダが作成できたかできなかったのテストをする。次に置き換える：
+```
+from paths import PROJECT_ROOT, RAW_DIR, OUT_ROOT, TABLES_DIR, FIGURES_DIR, LOGS_DIR, ensure_dirs
+
+def main():
+    ensure_dirs()
+    print("PROJECT_ROOT:", PROJECT_ROOT)
+    print("RAW_DIR:", RAW_DIR)
+    print("OUT_ROOT:", OUT_ROOT)
+    print("TABLES_DIR:", TABLES_DIR)
+    print("FIGURES_DIR:", FIGURES_DIR)
+    print("LOGS_DIR:", LOGS_DIR)
+
+if __name__ == "__main__":
+    main()
+	
+```
