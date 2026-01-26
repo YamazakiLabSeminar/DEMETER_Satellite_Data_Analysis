@@ -905,7 +905,7 @@ kp_num → kp_cat
 
 
 ## 2.4 コード実装
-1. Step2における条件設定
+### 1. Step2における条件設定
 
 ```configs/step2_normalization.yaml```(新規)
 
