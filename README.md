@@ -96,6 +96,9 @@ print("Now:", datetime.now())
 ## 0-1-2 パスの設定
 ``` paths.py ```で、フォルダ構造のように、「どこにデータがあって、どこに出力するか」を全部一貫して扱える。
 ### 1. パス設定
+
+<details><summary>サンプルコード</summary>
+
 ```
 from pathlib import Path
 
@@ -123,6 +126,8 @@ def ensure_dirs() -> None:
 
 ```
 
+</details>
+
 ``` def ensure_dirs() -> None: ```
 - 「フォルダがなければ作成する」ための関数を定義した。
 
@@ -132,6 +137,7 @@ for d in [ . . .]:
 ```
 - ``` parents=True ```：途中のフォルダもまとめて作る。
 - ``` exist_ok=True ```：すでにあってもエラーにしない。
+
 ### 2. 動作確認
 ``` src/main.py ```を更新てフォルダが作成できたかできなかったのテストをする。次に置き換える：
 ```
@@ -154,6 +160,9 @@ if __name__ == "__main__":
 # 0-2. ログ入れ
 巨大データ解析は、「どこで落ちたか、「何件処理したか」が命なので、ここを固める必要がある。
 ## 0-2-1 ```src/logger_setup.py```を新規作成
+
+<details><summary>サンプルコード</summary>
+
 ```
 from __future__ import annotations
 
@@ -204,6 +213,8 @@ def setup_logger(log_dir: Path, name: str = "demeter") -> logging.Logger:
 
 ```
 
+</details>
+
 ## 0-2-2 ログ対応確認
 ```
 from paths import LOGS_DIR, ensure_dirs
@@ -234,6 +245,9 @@ if __name__ == "__main__":
 - 何件成功/失敗したがをログに残す。
 
 ## 0-3-1. ```src/io_utils.py```（ファイル列挙+チェックポイント）
+
+<details><summary>サンプルコード</summary>
+
 ```
 from __future__ import annotations
 
@@ -289,6 +303,8 @@ def safe_run_one(logger: logging.Logger, func, *args, **kwargs) -> bool:
         return False
 ```
 
+</details>
+
 ## 0-3-2. ``` src/process_one_file.py```(現段階では軽いダミー処理)
 ```
 from __future__ import annotations
@@ -306,7 +322,7 @@ def process_one_csv(csv_path: Path) -> None:
         raise FileNotFoundError(csv_path)
 ```
 
-### 0-3-3. ```src/main.py```(膨大な数受けの回し方)
+## 0-3-3. ```src/main.py```(膨大な数受けの回し方)
 - スキップ機能があるから、途中で止まっても次回すぐ続きから。
 - ログを100件ごとにまとめるので、ファイル数が多くてもログが爆発しにくい。
 - 各ファイルの処理は ``` process_one_csv() ```に閉じ込めるので、解析が進んでも``` main ```が汚れない。
@@ -440,6 +456,9 @@ if __name__ == "__main__":
 
 ## 1.8 コード
 ### 1.8.1 ```src/step1_demeter.py```（新規）
+
+<details><summary>サンプルコード</summary>
+
 ```
 from __future__ import annotations
 
@@ -686,6 +705,8 @@ def step1_process_one_file(
     return out_path
 ```
 
+</details>
+
 ### 1.8.2 ```src/process_one_file.py``` （更新）
 ```
 from __future__ import annotations
@@ -716,6 +737,9 @@ def process_one_csv(csv_path: Path, logger: logging.Logger) -> None:
 ```
 
 ### 1.8.3 ```src/main.py```（Step1実行用に更新）
+
+<details><summary>サンプルコード</summary>
+
 ```
 from __future__ import annotations
 
@@ -774,6 +798,8 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+</details>
 
 ## 1.9 チェックポイント
 - outputs/interim/step1_extracted/（あなたの INTERIM_DIR に依存）に
