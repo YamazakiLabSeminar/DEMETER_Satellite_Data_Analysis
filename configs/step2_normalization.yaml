@@ -1,0 +1,36 @@
+# Step2: Normalization (binning + Kp merge + CDF normalization)
+
+kp:
+  csv_filename: "kpデータ_ALL(csv).csv"
+  join_method: "nearest"          # nearest固定（あなたの方針）
+  tolerance_hours: 2              # merge_asofの許容差（±2h）
+  numeric_rule: "thirds"          # '+' '-' を 1/3 として数値化
+
+  # Kpカテゴリ境界（あなたの定義を数値化で表現）
+  # 静か: kp_num <= 1.0
+  # 普通: 1.0 < kp_num < 8/3
+  # 擾乱: kp_num >= 8/3
+  quiet_max: 1.0
+  normal_max: 2.6666666667        # 8/3 (=2.666...) これ未満が普通
+
+binning:
+  mlat_step_deg: 2
+  mlon_step_deg: 5
+  # mlonを0..360に丸めるか（負のmlon対策）
+  mlon_to_0_360: true
+
+season:
+  spring_months: [3, 4, 5]
+  summer_months: [6, 7, 8]
+  autumn_months: [9, 10, 11]
+  winter_months: [12, 1, 2]
+
+cdf:
+  hist_bins: 256                  # ヒスト分割数（近似CDFの細かさ）
+  eps_range: 1.0e-12              # min==max対策
+
+io:
+  step1_dirname: "step1_extracted"
+  step2_dirname: "step2_normalized"
+  checkpoint_filename: "checkpoint_step2_done.txt"
+  bin_stats_filename: "step2_bin_counts.csv"

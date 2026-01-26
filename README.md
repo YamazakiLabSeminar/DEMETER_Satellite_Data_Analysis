@@ -875,3 +875,79 @@ kp_num → kp_cat
     各```bin_id```内での```E_1700band_mean```の分布に基づき、E_norm∊[0, 1]を計算して列として付与する。
 
     膨大なデータのため、以下の手順で進める：
+    1. binごとの```min/max/count```集計
+    2. bin事の固定本数ヒストグラム作成(例: 256bins)
+    - パス1の```min_E~min_E```を基づいて、固定本数(例256)の区間に分けて```hist[0..255]をbinごとに作る。
+    3. ヒストグラムの累積で各点の```E_norm```を計算して保存する。
+    - 各binのhistから累積(CDF)を計算して、各データ点の```E```が入る区間を求め、```E_norm(0~1)```をつけて、正規化済みデータとして保存
+    - (オプション操作)以下の確認条件を満たしたら：
+        - ```checkpoint_step2_done.txt```にStep1の全ファイル名が入っている。
+        - ```outputs/interim/step2_normalized/``` に出力ファイル数が揃っている（= Step1入力数と一致、または失敗分がログに明記）
+        - ```tables/step2_bin_counts.csv``` などが生成されている（統計が完成している）
+    読み取った100個分のStep1出力を削除する。
+
+
+7. Step2の出力(正規化済みデータ)
+
+    各軌道ファイルごとにSSDへ保存：
+    - ```datetime, lat, lon, mlat, mlon```
+    - ```kp_str, kp_num, kp_cat```
+    - ```mlat_bin, mlon_bin, season, bin_id```
+    - ```E_1700band_mean```
+    - ```E_norm(0~1)```
+    - ```is_filled```
+
+    保存先例: ```outputs/interim/step2_normalized/```
+
+    加えて品質確認デーブル:
+    - ```tables/step2_bin_counts.csv```（binの件数、min/max）
+    - ```tables/checkpoint_step2_done.txt```（途中再開）
+
+
+## 2.4 コード実装
+1. Step2における条件設定
+
+```configs/step2_normalization.yaml```(新規)
+
+<details><summary>サンプルコード</summary>
+
+``` python
+# Step2: Normalization (binning + Kp merge + CDF normalization)
+
+kp:
+  csv_filename: "kpデータ_ALL(csv).csv"
+  join_method: "nearest"          # nearest固定（あなたの方針）
+  tolerance_hours: 2              # merge_asofの許容差（±2h）
+  numeric_rule: "thirds"          # '+' '-' を 1/3 として数値化
+
+  # Kpカテゴリ境界（あなたの定義を数値化で表現）
+  # 静か: kp_num <= 1.0
+  # 普通: 1.0 < kp_num < 8/3
+  # 擾乱: kp_num >= 8/3
+  quiet_max: 1.0
+  normal_max: 2.6666666667        # 8/3 (=2.666...) これ未満が普通
+
+binning:
+  mlat_step_deg: 2
+  mlon_step_deg: 5
+  # mlonを0..360に丸めるか（負のmlon対策）
+  mlon_to_0_360: true
+
+season:
+  spring_months: [3, 4, 5]
+  summer_months: [6, 7, 8]
+  autumn_months: [9, 10, 11]
+  winter_months: [12, 1, 2]
+
+cdf:
+  hist_bins: 256                  # ヒスト分割数（近似CDFの細かさ）
+  eps_range: 1.0e-12              # min==max対策
+
+io:
+  step1_dirname: "step1_extracted"
+  step2_dirname: "step2_normalized"
+  checkpoint_filename: "checkpoint_step2_done.txt"
+  bin_stats_filename: "step2_bin_counts.csv"
+```
+
+</details>
