@@ -311,6 +311,7 @@ def process_one_csv(csv_path: Path) -> None:
 - ログを100件ごとにまとめるので、ファイル数が多くてもログが爆発しにくい。
 - 各ファイルの処理は ``` process_one_csv() ```に閉じ込めるので、解析が進んでも``` main ```が汚れない。
 
+<details><summary>サンプルコード</summary>
 ```
 from __future__ import annotations
 
@@ -377,6 +378,7 @@ if __name__ == "__main__":
     main()
 ```
 
+</details>
 
 # 1.新しいヘッダ付き+空白セル補完+1.7kHz帯域平均抽出+数値型化＋軽量保存
 膨大なDEMETER軌道CSV（1ファイル＝1軌道）を、後段（正規化・SEA・相関・Molchan）でそのまま使えるように、
