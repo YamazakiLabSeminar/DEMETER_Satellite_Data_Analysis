@@ -312,6 +312,7 @@ def process_one_csv(csv_path: Path) -> None:
 - 各ファイルの処理は ``` process_one_csv() ```に閉じ込めるので、解析が進んでも``` main ```が汚れない。
 
 <details><summary>サンプルコード</summary>
+
 ```
 from __future__ import annotations
 
