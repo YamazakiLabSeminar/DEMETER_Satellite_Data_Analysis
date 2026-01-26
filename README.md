@@ -951,3 +951,44 @@ io:
 ```
 
 </details>
+
+### 2. configloaedの関数定義
+
+``` src/config_loader.py```（新規）
+
+<details><summary>実装コード</summary>
+
+``` python
+from __future__ import annotations
+
+from pathlib import Path
+
+def load_yaml_config(path: Path) -> dict:
+    """
+    YAML設定ファイルを読み込んで dict を返す。
+    もし pyyaml が入っていなければ、分かりやすいエラーを出す。
+    """
+    try:
+        import yaml
+    except ImportError as e:
+        raise ImportError(
+            "pyyaml が必要です。`pip install pyyaml` を実行してください。"
+        ) from e
+
+    with path.open("r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+
+    if not isinstance(cfg, dict):
+        raise ValueError(f"Config must be a dict: {path}")
+    return cfg
+
+```
+
+</details>
+
+- ```from __future__ import annotations```
+    - Pythonの将来機能を先取りする宣言。
+    - これを入れると、型ヒント（Path や dict など）の扱いが少し柔軟になって、型ヒント周りのトラブルが減りやすい。
+    - 「書かなくても動くことが多いけど、書いておくと便利」系。
+---
+- 

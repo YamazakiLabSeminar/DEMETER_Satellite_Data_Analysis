@@ -16,6 +16,7 @@ INTERIM_DIR = OUT_ROOT / "interim"      # 中間生成物（容量が許せば�
 TABLES_DIR = OUT_ROOT / "tables"        # 結果CSV
 LOGS_DIR = OUT_ROOT / "logs"            # ログもSSD2にまとめる（推奨）
 FIGURES_DIR = OUT_ROOT / "figures"      # Word貼り付け用PNGもここ（推奨）
+CONFIG_DIR = PROJECT_ROOT / "configs"   # 設定用
 
 def ensure_dirs() -> None:
     """必要フォルダを全部作る（既に存在してもOK）。"""
