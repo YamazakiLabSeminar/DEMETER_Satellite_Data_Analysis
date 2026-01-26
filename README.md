@@ -952,6 +952,7 @@ io:
 
 </details>
 
+---
 ### 2. configloaedの関数定義
 
 ``` src/config_loader.py```（新規）
