@@ -410,17 +410,17 @@ if __name__ == "__main__":
 - lat, lon, mlat, mlon は連続量として線形補間（上下平均）
 	- （任意）is_filled フラグを作って「元々欠損だった行」を記録
 
-# 1.4 数値型へ統一
+## 1.4 数値型へ統一
 - lat, lon, mlat, mlon は float
 - 周波数スペクトルは float（可能なら float32 にして軽量化）
 - datetime は datetime型のまま保持（時系列解析が楽）
 
-# 1.5 1.7kHz帯（1621.09375〜1718.75 Hz）を抽出し、平均して1本の指標に要約
+## 1.5 1.7kHz帯（1621.09375〜1718.75 Hz）を抽出し、平均して1本の指標に要約
 - 対象はビン 83〜88（6本）
 - その6列を行方向に平均して E_1700band_mean（仮名） を作る
 	- （列は最終的にこの1本だけ残す方針）
 
-# 1.6 軽量データとして保存（SSD2）
+## 1.6 軽量データとして保存（SSD2）
 - 生データは書き換えない
 - 1軌道ファイルから保存するのは 必要最小限：
 	- datetime
@@ -428,15 +428,15 @@ if __name__ == "__main__":
 	- E_1700band_mean
 - 出力先例: ```outputs/interim/step1_extracted/<元ファイル名>_E1700band.csv
 
-# 1.7 品質サマリ
+## 1.7 品質サマリ
 膨大数でも管理できるよう、1ファイルごとに軽い統計を集める：
 - 行数
 - メタ欠損率（補完前）
 - 補完後にNaNが残っていないか
 - 抽出帯域（83〜88）を使ったことの記録
 
-# 1.8 コード
-## 1.8.1 ```src/step1_demeter.py```（新規）
+## 1.8 コード
+### 1.8.1 ```src/step1_demeter.py```（新規）
 ```
 from __future__ import annotations
 
@@ -683,7 +683,7 @@ def step1_process_one_file(
     return out_path
 ```
 
-## 1.8.2 ```src/process_one_file.py``` （更新）
+### 1.8.2 ```src/process_one_file.py``` （更新）
 ```
 from __future__ import annotations
 
@@ -772,7 +772,7 @@ if __name__ == "__main__":
     main()
 ```
 
-# 1.9 チェックポイント
+## 1.9 チェックポイント
 - outputs/interim/step1_extracted/（あなたの INTERIM_DIR に依存）に
 DMT_...._step1.csv が大量に生成される。
 - outputs/tables/step1_summary.csv に1ファイル1行のサマリが追記される。
@@ -782,3 +782,11 @@ DMT_...._step1.csv が大量に生成される。
 ```datetime, lat, lon, mlat, mlon, E_1700band_mean, is_filled```
 - E_1700band_mean が NaNだらけになっていないか（帯域抽出が成功しているか）
 - 2回目実行で skipped が増えて高速に終わるか（チェックポイントOK）
+
+# 2. 正規化：ビン分け+CDF正規化
+Step 1で作った```E_1700band_mean```はそのままだと、
+- 地磁気経緯度
+- 季節
+- 磁気嵐活動(Kp指数)
+の影響を強く受けて、背景レベルが場所と条件で変わる。したがって、**条件ごとに背景分布を揃えて、値を「同じスケール（0~1）に変換する」**必要がある。
+- 比較可能な相対強度にする
