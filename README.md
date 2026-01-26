@@ -953,6 +953,7 @@ io:
 </details>
 
 ---
+
 ### 2. configloaedの関数定義
 
 ``` src/config_loader.py```（新規）
@@ -991,5 +992,7 @@ def load_yaml_config(path: Path) -> dict:
     - Pythonの将来機能を先取りする宣言。
     - これを入れると、型ヒント（Path や dict など）の扱いが少し柔軟になって、型ヒント周りのトラブルが減りやすい。
     - 「書かなくても動くことが多いけど、書いておくと便利」系。
----
+
 - 
+
+---
