@@ -29,25 +29,18 @@ df_declus['cumulative_count'] = range(1, len(df_declus)+1)
 # グラフ作成
 #==================================================================================================================================
 ## グラフサイズ（幅76mm*高さ55mm）
-fig = plt.figure(figsize=(76/25.4, 55/25.4))
-## フォント設定（MS明朝、黒、9pt）
-plt.rcParams.update({
-    "font.family": "MS Mincho",
-    "font.size": 9,
-    "text.color": "black",
-})
-## プロット
-plt.plot(df_org['datetime'], df_org['cumulative_count'], label='Before', ls="-.")
-plt.plot(df_declus['datetime'], df_declus['cumulative_count'], label='After(30km-30days)')
+fig, ax = plt.subplots(layout="constrained")
 
-xlable = plt.xlabel('Date')
-ylable = plt.ylabel('Cumulative Number')
-leg = plt.legend(loc="best")
-leg.set_in_layout(False)
-fig.tight_layout()
+## プロット
+ax.plot(df_org['datetime'], df_org['cumulative_count'], label='Before', ls="-.", color="black")
+ax.plot(df_declus['datetime'], df_declus['cumulative_count'], label='After(30km-30days)', color='black')
+
+ax.set_xlabel('Date')
+ax.set_ylabel('Cumulative Number')
+ax.legend()
+plt.tight_layout()
 
 # 保存
-plt.savefig(save_path, dpi=300)
-plt.show()
+fig.savefig(save_path, dpi=300)
 
 
