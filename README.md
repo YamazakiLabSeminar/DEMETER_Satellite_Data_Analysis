@@ -30,14 +30,24 @@ Visual Studio Code Python 3.12.1
 │
 └─ src/                     # Pythonコード本体
 	├─ __init__.py
-	├─ main.py               # 入口（ここ叩けば一連が動く）
+	├─ logger_setup.py       # loggerの設定
 	├─ paths.py              # パス管理（data/rawとかを一括で扱う）
-	├─ io_demeter.py         # DEMETER CSV 読み込み
+	├─ io_utils.py         # DEMETER CSV 読み込み
 	├─ eq_catalog.py         # 地震カタログ処理・デクラスタリング
-	├─ orbit_extract.py      # 地震軌道抽出（330km & 4h）
-	├─ timeseries.py         # 切り出し・SEA・移動平均
-	├─ anomaly.py            # 相関・異常判定
-	└─ eval_molchan.py       # 警報率/予知率/Molchan
+	├─ config_loader_setup.py
+	├─ process_one_file.py
+	├─ read_demeter.py
+	│
+    ├─ step1/
+    │   ├─ __init__.py   
+    │   ├─ main.py
+    │   └─ step1_demeter.py
+    │
+    ├─ step2/
+    │   ├─ __init__.py
+    │   ├─ main.py
+    │   └─ step2_normalization.py
+    └─ 
 
 ```
 
@@ -990,6 +1000,5 @@ def load_yaml_config(path: Path) -> dict:
     - これを入れると、型ヒント（Path や dict など）の扱いが少し柔軟になって、型ヒント周りのトラブルが減りやすい。
     - 「書かなくても動くことが多いけど、書いておくと便利」系。
 
-- 
-
 ---
+
