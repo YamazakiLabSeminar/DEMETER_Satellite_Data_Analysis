@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from paths import RAW_DIR, LOGS_DIR, TABLES_DIR, ensure_dirs
-from logger_setup import setup_logger
-from io_utils import iter_csv_files, load_checkpoint, append_checkpoint, safe_run_one
-from process_one_file import process_one_csv
+from src.paths import RAW_DIR, LOGS_DIR, TABLES_DIR, ensure_dirs
+from src.logger_setup import setup_logger
+from src.io_utils import iter_csv_files, load_checkpoint, append_checkpoint, safe_run_one
+from src.process_one_file import process_one_csv
 
 
 def main():

@@ -30,7 +30,7 @@ cdf:
   eps_range: 1.0e-12              # min==max対策
 
 io:
-  step1_dirname: "step1_extracted"
-  step2_dirname: "step2_normalized"
-  checkpoint_filename: "checkpoint_step2_done.txt"
-  bin_stats_filename: "step2_bin_counts.csv"
+  step1_dirname: "step1_extracted_test"
+  step2_dirname: "step2_normalized_test"
+  checkpoint_filename: "checkpoint_step2_done_test.txt"
+  bin_stats_filename: "step2_bin_counts_test.csv"

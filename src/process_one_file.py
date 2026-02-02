@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 import logging
 
-from paths import INTERIM_DIR, TABLES_DIR
-from step1_demeter import step1_process_one_file
+from src.paths import INTERIM_DIR, TABLES_DIR
+from src.step1.step1_demeter import step1_process_one_file
 
 
 def process_one_csv(csv_path: Path, logger: logging.Logger) -> None:

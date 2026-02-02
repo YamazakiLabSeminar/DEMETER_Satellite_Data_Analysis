@@ -40,7 +40,7 @@ def main() -> None:
 
     # ===== 1) SSD入出力パス（paths.py）を使う =====
     # ※ここが今回の修正ポイント：inputs/outputs ではなく paths.py をソースオブトゥルースにする
-    from ..paths import (
+    from src.paths import (
         CONFIG_DIR,
         EXTERNAL_DIR,
         INTERIM_DIR,
@@ -54,13 +54,13 @@ def main() -> None:
     ensure_dirs()
 
     # ===== 2) config を読む（CONFIG_DIR 配下がデフォルト） =====
-    from ..config_loader import load_yaml_config
+    from src.config_loader import load_yaml_config
 
     cfg_path = resolve_config_path(args.config, CONFIG_DIR)
     cfg = load_yaml_config(cfg_path)
 
     # ===== 3) logger を作る（ログもSSD2へ） =====
-    from ..logger_setup import setup_logger
+    from src.logger_setup import setup_logger
 
     logger = setup_logger(LOGS_DIR, name="step2")
 
