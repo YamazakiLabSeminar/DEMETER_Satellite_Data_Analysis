@@ -26,7 +26,7 @@ Visual Studio Code Python 3.12.1
 │
 │
 ├─ configs/
-│  └─ config.yaml           # 実験条件（距離330km、4時間、窓幅±50s、閾値など）
+│  └─ step2_normalization.yaml              # 正規化の設定条件（bin条件、kpデータ処理設定、cdf設定）
 │
 └─ src/                     # Pythonコード本体
 	├─ __init__.py
