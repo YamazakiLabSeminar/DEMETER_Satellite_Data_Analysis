@@ -5,55 +5,49 @@ original_eq_file=r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analys
 declustring_eq_file=r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Output\all_eq_declustring_30day_30km.csv'
 save_path=r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\graphic\cumulative_cimparison_plots_30days_30km.png'
 
-def cumulative_comparison_plots(
-    original_eq_file, declustring_eq_file,
-    save_path    
-):
-
-    # データの読み取り
-    df_org = pd.read_csv(original_eq_file)
-    df_declus = pd.read_csv(declustring_eq_file)
-
-    # 時間をdatetime形に変形
-    df_org['datetime'] = pd.to_datetime(df_org[['year', 'month', 'day', 'hour', 'minute', 'second']])
-    df_declus['datetime'] = pd.to_datetime(df_declus[['year', 'month', 'day', 'hour', 'minute', 'second']])
-
-    # 時系列昇順にソートする
-    df_org = df_org.sort_values('datetime')
-    df_declus = df_declus.sort_values('datetime')
-
-    # 一応確認
-    print(f'[Info]This is sorted dataframe.Original:{df_org} Declustring:{df_declus}')
-
-    # 両dfに累積カウントの列を追加する
-    df_org['cumulative_count'] = range(1, len(df_org)+1)
-    df_declus['cumulative_count'] = range(1, len(df_declus)+1)
-
-    # プロット
-    #==================================================================================================================================
-    plt.figure(figsize=(78/25.4, 60/25.4))
-    ## フォント設定（MS明朝、黒、9pt）
-    plt.rcParams.update({
-        "font.family": "MS Mincho",
-        "font.size": 9,
-        "text.color": "black",
-    })
-
-    plt.plot(df_org['datetime'], df_org['cumulative_count'], label='Original (all earthquakes)', color='red', linewidth=1.5)
-    plt.plot(df_declus['datetime'], df_declus['cumulative_count'], label='Declustring (all earthquakes)', color='blue', linewidth=1.5)
-
-    plt.xlabel('Date')
-    plt.ylabel('Cumulative Number')
-    plt.legend()
-    plt.tight_layout(pad=0.5)
-
-    # 保存
-    plt.savefig(save_path, dpi=300, bbox_inches="tight", pad_inches=0.02)
-    plt.show()
 
 
-if __name__ == "__main__":
-    cumulative_comparison_plots(
-    original_eq_file, declustring_eq_file,
-    save_path    
-)
+# データの読み取り
+df_org = pd.read_csv(original_eq_file)
+df_declus = pd.read_csv(declustring_eq_file)
+
+# 時間をdatetime形に変形
+df_org['datetime'] = pd.to_datetime(df_org[['year', 'month', 'day', 'hour', 'minute', 'second']])
+df_declus['datetime'] = pd.to_datetime(df_declus[['year', 'month', 'day', 'hour', 'minute', 'second']])
+
+# 時系列昇順にソートする
+df_org = df_org.sort_values('datetime')
+df_declus = df_declus.sort_values('datetime')
+
+# 一応確認
+print(f'[Info]This is sorted dataframe.Original:{df_org} Declustring:{df_declus}')
+
+# 両dfに累積カウントの列を追加する
+df_org['cumulative_count'] = range(1, len(df_org)+1)
+df_declus['cumulative_count'] = range(1, len(df_declus)+1)
+
+# グラフ作成
+#==================================================================================================================================
+## グラフサイズ（幅76mm*高さ55mm）
+fig = plt.figure(figsize=(76/25.4, 55/25.4))
+## フォント設定（MS明朝、黒、9pt）
+plt.rcParams.update({
+    "font.family": "MS Mincho",
+    "font.size": 9,
+    "text.color": "black",
+})
+## プロット
+plt.plot(df_org['datetime'], df_org['cumulative_count'], label='Before', ls="-.")
+plt.plot(df_declus['datetime'], df_declus['cumulative_count'], label='After(30km-30days)')
+
+xlable = plt.xlabel('Date')
+ylable = plt.ylabel('Cumulative Number')
+leg = plt.legend(loc="best")
+leg.set_in_layout(False)
+fig.tight_layout()
+
+# 保存
+plt.savefig(save_path, dpi=300)
+plt.show()
+
+
