@@ -99,12 +99,12 @@ def kp_num_to_cat(kp_num: float, quiet_max: float, normal_max: float) -> str:
       擾乱: kp_num >= normal_max
     """
     if np.isnan(kp_num):
-        return "不明"
+        return "unknown"
     if kp_num <= quiet_max:
-        return "静か"
+        return "quiet"
     if kp_num < normal_max:
-        return "普通"
-    return "擾乱"
+        return "normal"
+    return "disturb"
 
 
 def load_kp_table(kp_csv_path: Path, cfg: dict, logger: logging.Logger) -> pd.DataFrame:
@@ -208,14 +208,14 @@ def month_to_season(month: int, cfg: dict) -> str:
     winter = set(_safe_get(cfg, ["season", "winter_months"], [12, 1, 2]))
 
     if month in spring:
-        return "春"
+        return "spring"
     if month in summer:
-        return "夏"
+        return "summer"
     if month in autumn:
-        return "秋"
+        return "autumn"
     if month in winter:
-        return "冬"
-    return "不明"
+        return "winter"
+    return "unknown"
 
 
 def add_bins(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
