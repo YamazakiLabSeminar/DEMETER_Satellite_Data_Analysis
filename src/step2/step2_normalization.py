@@ -202,7 +202,7 @@ def attach_kp_nearest(df: pd.DataFrame, kp_table: pd.DataFrame, cfg: dict) -> pd
         tolerance=pd.Timedelta(hours=tol_h),
     )
 
-    merged["kp_cat"] = merged["kp_cat"].fillna("不明")
+    merged["kp_cat"] = merged["kp_cat"].fillna("unknown")
     return merged
 
 
@@ -237,7 +237,7 @@ def add_bins(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
     # season
     months = df["datetime"].dt.month
-    df["season"] = months.map(lambda m: month_to_season(int(m), cfg) if pd.notna(m) else "不明")
+    df["season"] = months.map(lambda m: month_to_season(int(m), cfg) if pd.notna(m) else "unkown")
 
     mlat_step = float(mlat_step)
 
@@ -255,9 +255,6 @@ def add_bins(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     mlat_bin_int = np.rint(mlat_bin).astype("Int64")  # rint=四捨五入で整数化
 
     df["mlat_bin"] = mlat_bin_int
-
-    # mlat_bin: floor(mlat/step)*step
-    df["mlat_bin"] = (np.floor(df["mlat"] / float(mlat_step)) * float(mlat_step)).astype("Int64")
 
     # mlon_bin: (必要なら0..360へ変換) -> floor(mlon/step)*step
     mlon = df["mlon"].to_numpy(dtype=float)
