@@ -281,8 +281,12 @@ def read_step1_csv(path: Path) -> pd.DataFrame:
     if missing:
         raise ValueError(f"Step1 file missing columns {missing}: {path.name}")
 
-    # datetime型に直す
-    df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
+    # datetime型に直す（ISO8601を優先、ダメなら通常変換）
+    s = df["datetime"].astype("string")
+    try:
+        df["datetime"] = pd.to_datetime(s, format="ISO8601", errors="coerce")
+    except Exception:
+        df["datetime"] = pd.to_datetime(s, errors="coerce")
 
     # 数値型に直す（壊れていたらNaN）
     for c in ["lat", "lon", "mlat", "mlon", "E_1700band_mean"]:
