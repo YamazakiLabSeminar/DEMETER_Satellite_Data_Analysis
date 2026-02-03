@@ -125,13 +125,19 @@ def load_kp_table(kp_csv_path: Path, cfg: dict, logger: logging.Logger) -> pd.Da
                 return c
         raise ValueError(f"Kp CSV missing columns: {candidates}")
 
+    def pick_col_optional(candidates: list[str]) -> str | None:
+        for c in candidates:
+            if c in kp.columns:
+                return c
+        return None
+
     col_year = pick_col(["year", "Year"])
     col_month = pick_col(["month", "Month"])
     col_day = pick_col(["day", "Day"])
     col_hour = pick_col(["hour", "Hour"])
     col_minute = pick_col(["minute", "Minute", "min"])
     col_second = pick_col(["sec", "second", "Second"])
-    col_msec = pick_col(["milsec", "milsecond", "msec", "Millisecond"])
+    col_msec = pick_col_optional(["milsec", "milsecond", "msec", "Millisecond"])
     col_kp = pick_col(["kp", "Kp", "KP"])
 
     # 年月日+時刻 → datetime（UTC前提）
@@ -147,8 +153,11 @@ def load_kp_table(kp_csv_path: Path, cfg: dict, logger: logging.Logger) -> pd.Da
         errors="coerce",
     )
 
-    # ミリ秒（存在しない/壊れているとNaTになり得るのでcoerce）
-    ms = pd.to_numeric(kp[col_msec], errors="coerce")
+    # ミリ秒（無ければ0扱い、壊れているとNaTになり得るのでcoerce）
+    if col_msec is not None:
+        ms = pd.to_numeric(kp[col_msec], errors="coerce")
+    else:
+        ms = 0
     dt = dt + pd.to_timedelta(ms, unit="ms")
 
     out = pd.DataFrame(
@@ -181,7 +190,7 @@ def attach_kp_nearest(df: pd.DataFrame, kp_table: pd.DataFrame, cfg: dict) -> pd
     """
     tol_h = int(_safe_get(cfg, ["kp", "tolerance_hours"], 2))
 
-    left = df.sort_values("datetime").reset_index(drop=True)
+    left = df.dropna(subset=["datetime"]).sort_values("datetime").reset_index(drop=True)
     right = kp_table.sort_values("datetime_kp").reset_index(drop=True)
 
     merged = pd.merge_asof(
@@ -257,8 +266,8 @@ def add_bins(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     mlon_bin = np.floor(mlon / float(mlon_step)) * float(mlon_step)
     df["mlon_bin"] = pd.Series(mlon_bin).astype("Int64")
 
-    # bin_id: 4条件を1キーに
-    df["bin_id"] = (
+    # bin_id: 4条件を1キーに（mlat_bin / mlon_bin が欠損なら bin_id も欠損）
+    bin_id = (
         df["mlat_bin"].astype(str)
         + "_"
         + df["mlon_bin"].astype(str)
@@ -267,6 +276,8 @@ def add_bins(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
         + "_"
         + df["kp_cat"].astype(str)
     )
+    mask_valid = df["mlat_bin"].notna() & df["mlon_bin"].notna()
+    df["bin_id"] = pd.Series(bin_id).where(mask_valid)
     return df
 
 
