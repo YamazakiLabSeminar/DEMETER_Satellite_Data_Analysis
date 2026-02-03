@@ -227,36 +227,32 @@ def month_to_season(month: int, cfg: dict) -> str:
     return "unknown"
 
 
-# ===== 追加コピペ：src/step2/step2_normalization.py の add_bins の mlat_bin / mlon_bin を安全版に差し替え =====
-import numpy as np
-import pandas as pd
-
 def add_bins(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
-    mlat_step = int(_safe_get(cfg, ["binning", "mlat_step_deg"], 2))
-    mlon_step = int(_safe_get(cfg, ["binning", "mlon_step_deg"], 5))
+    """
+    mlat_bin(2deg), mlon_bin(5deg), season, bin_id を追加する。
+    """
+    mlat_step = float(_safe_get(cfg, ["binning", "mlat_step_deg"], 2))
+    mlon_step = float(_safe_get(cfg, ["binning", "mlon_step_deg"], 5))
     to_0_360 = bool(_safe_get(cfg, ["binning", "mlon_to_0_360"], True))
 
     # season
     months = df["datetime"].dt.month
     df["season"] = months.map(lambda m: month_to_season(int(m), cfg) if pd.notna(m) else "unknown")
 
-    # ---- mlat_bin（安全版）----
-    mlat = pd.to_numeric(df["mlat"], errors="coerce").where(np.isfinite, np.nan)
-    mlat_step_f = float(mlat_step)
-    mlat_bin = np.floor(mlat / mlat_step_f) * mlat_step_f
-    # 「整数ビン」で持つ（例：2度刻み → ...,-4,-2,0,2,...）
-    df["mlat_bin"] = pd.Series(np.rint(mlat_bin), index=df.index).astype("Int64")
+    # mlat_bin: floor(mlat/step)*step（NaNは維持）
+    mlat = pd.to_numeric(df["mlat"], errors="coerce")
+    mlat = mlat.where(np.isfinite(mlat), np.nan)
+    df["mlat_bin"] = np.floor(mlat / mlat_step) * mlat_step
 
-    # ---- mlon_bin（安全版）----
-    mlon = pd.to_numeric(df["mlon"], errors="coerce").where(np.isfinite, np.nan).to_numpy(dtype=float)
+    # mlon_bin: (必要なら0..360へ変換) -> floor(mlon/step)*step
+    mlon = pd.to_numeric(df["mlon"], errors="coerce")
+    mlon = mlon.where(np.isfinite(mlon), np.nan).to_numpy(dtype=float)
     if to_0_360:
         mlon = np.mod(mlon, 360.0)
-    mlon_step_f = float(mlon_step)
-    mlon_bin = np.floor(mlon / mlon_step_f) * mlon_step_f
-    df["mlon_bin"] = pd.Series(np.rint(mlon_bin), index=df.index).astype("Int64")
+    mlon_bin = np.floor(mlon / mlon_step) * mlon_step
+    df["mlon_bin"] = pd.Series(mlon_bin, index=df.index)
 
-    # bin_id（欠損binはbin_idも欠損）
-    mask_valid = df["mlat_bin"].notna() & df["mlon_bin"].notna() & df["season"].notna() & df["kp_cat"].notna()
+    # bin_id: 4条件を1キーに（mlat_bin / mlon_bin が欠損なら bin_id も欠損）
     bin_id = (
         df["mlat_bin"].astype(str)
         + "_"
@@ -266,65 +262,31 @@ def add_bins(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
         + "_"
         + df["kp_cat"].astype(str)
     )
+    mask_valid = df["mlat_bin"].notna() & df["mlon_bin"].notna()
     df["bin_id"] = pd.Series(bin_id, index=df.index).where(mask_valid)
-
     return df
-
 
 
 # --------------------------
 # 3) Step1ファイル読み込み
 # --------------------------
-# ===== コピペで置き換え：src/step2/step2_normalization.py の read_step1_csv を丸ごと差し替え =====
-
-STEP1_REQUIRED_COLS = [
-    "datetime", "lat", "lon", "mlat", "mlon", "E_1700band_mean", "is_filled",
-]
-
 def read_step1_csv(path: Path) -> pd.DataFrame:
     """
-    Step1出力CSVを読み、必要列と型を揃える（encoding問題・壊れ行・datetime警告に強い版）。
+    Step1出力CSVを読み、必要列と型を揃える。
     """
-    # 1) まず「必要列だけ」読む（I/O削減 & 壊れにくい）
-    read_kwargs = dict(
-        usecols=lambda c: c in STEP1_REQUIRED_COLS,  # 必要列だけ読む
-        low_memory=False,
-        on_bad_lines="skip",  # 壊れた行があっても落ちない
-    )
+    df = pd.read_csv(path)
 
-    # 2) エンコーディングの揺れに対応（順に試す）
-    last_err = None
-    for enc in ("utf-8-sig", "utf-8", "cp932", "shift_jis", "latin1"):
-        try:
-            df = pd.read_csv(path, encoding=enc, **read_kwargs)
-            break
-        except Exception as e:
-            last_err = e
-            df = None
-    if df is None:
-        # 最後の例外をそのまま投げる（ここで止まるならファイルそのものが壊れている可能性が高い）
-        raise last_err
-
-    # 3) 必須列チェック
+    # 必須列チェック
     missing = [c for c in STEP1_REQUIRED_COLS if c not in df.columns]
     if missing:
         raise ValueError(f"Step1 file missing columns {missing}: {path.name}")
 
-    # 4) datetime：警告が出にくい「ISO8601指定」→ダメなら通常変換
-    #    （pandasのバージョン差で format="ISO8601" が効かない場合もあるので二段構え）
-    s = df["datetime"].astype("string")
-    try:
-        df["datetime"] = pd.to_datetime(s, format="ISO8601", errors="coerce")
-    except Exception:
-        df["datetime"] = pd.to_datetime(s, errors="coerce")
+    # datetime型に直す
+    df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
 
-    # 5) 数値列：全部数値化（壊れてたらNaN）
+    # 数値型に直す（壊れていたらNaN）
     for c in ["lat", "lon", "mlat", "mlon", "E_1700band_mean"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
-
-    # 6) inf を NaN に寄せる（後段のbin計算や統計が落ちない）
-    for c in ["lat", "lon", "mlat", "mlon", "E_1700band_mean"]:
-        df[c] = df[c].where(np.isfinite(df[c]), np.nan)
 
     return df
 
