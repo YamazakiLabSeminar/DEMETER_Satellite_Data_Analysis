@@ -90,6 +90,7 @@ def main() -> None:
     logger.info(f"step1_dir    = {step1_dir}")
     logger.info(f"kp_csv_path  = {kp_csv_path}")
     logger.info(f"step2_outdir = {step2_out_dir}")
+    
 
     # ===== 6) Step2 本体を呼ぶ =====
     from .step2_normalization import run_step2

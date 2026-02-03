@@ -230,6 +230,23 @@ def add_bins(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     months = df["datetime"].dt.month
     df["season"] = months.map(lambda m: month_to_season(int(m), cfg) if pd.notna(m) else "不明")
 
+    mlat_step = float(mlat_step)
+
+    # 1) 数値化
+    mlat = pd.to_numeric(df["mlat"], errors="coerce")
+
+    # 2) inf を NaN に寄せる
+    mlat = mlat.where(np.isfinite(mlat), np.nan)
+
+    # 3) ビン（floor）→ step を掛け戻す
+    mlat_bin = np.floor(mlat / mlat_step) * mlat_step
+
+    # 4) “整数ビン”として持ちたいなら、まず丸めてから Int64
+    #    例：10度刻みなら -30.0000000004 を -30 に寄せる
+    mlat_bin_int = np.rint(mlat_bin).astype("Int64")  # rint=四捨五入で整数化
+
+    df["mlat_bin"] = mlat_bin_int
+
     # mlat_bin: floor(mlat/step)*step
     df["mlat_bin"] = (np.floor(df["mlat"] / float(mlat_step)) * float(mlat_step)).astype("Int64")
 
