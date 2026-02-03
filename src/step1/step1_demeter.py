@@ -65,9 +65,8 @@ def to_numeric_inplace(df: pd.DataFrame, cols: list[str]) -> None:
     """
     指定列を数値に変換する（変換できないものはNaNになる）。
     """
-    for c in cols:
+    for c in ["year","month","day","hour","minute","second","milsecond"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
-
 
 def build_datetime_series(df: pd.DataFrame) -> pd.Series:
     """
@@ -77,19 +76,14 @@ def build_datetime_series(df: pd.DataFrame) -> pd.Series:
     # year..second は整数っぽいが欠損があるので一旦 float/NaN を許す
     base = pd.to_datetime(
         dict(
-            year=df["year"],
-            month=df["month"],
-            day=df["day"],
-            hour=df["hour"],
-            minute=df["minute"],
-            second=df["second"],
+            year=df["year"], month=df["month"], day=df["day"],
+            hour=df["hour"], minute=df["minute"], second=df["second"]
         ),
-        errors="coerce",
+        errors="coerce"
     )
-
     # milsecond（ミリ秒）を timedelta にして足す（欠損はNaTのまま）
-    ms = pd.to_timedelta(df["milsecond"], unit="ms", errors="coerce")
-    dt = base + ms
+    dt = df["datetime"] = base + pd.to_timedelta(df["milsecond"], unit="ms")
+    dt = df["datetime"] = pd.to_datetime(df["datetime"], format="%Y-%m-%d %H:%M:%S.%f", errors="coerce")
     return dt
 
 
