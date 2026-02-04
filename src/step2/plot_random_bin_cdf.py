@@ -38,6 +38,11 @@ def build_argparser() -> argparse.ArgumentParser:
         default="",
         help="Output PNG path. If empty, save under FIGURES_DIR.",
     )
+    p.add_argument(
+        "--logx",
+        action="store_true",
+        help="Use log scale for x-axis (E_1700band_mean).",
+    )
     return p
 
 
@@ -77,28 +82,37 @@ def pick_random_bin_id(files: list[Path], seed: int | None) -> str:
     return chosen
 
 
-def collect_enorm(files: list[Path], bin_id: str) -> np.ndarray:
-    values: list[float] = []
+def collect_pairs(files: list[Path], bin_id: str) -> tuple[np.ndarray, np.ndarray]:
+    e_vals: list[np.ndarray] = []
+    en_vals: list[np.ndarray] = []
     for f in files:
-        df = pd.read_csv(f, usecols=["bin_id", "E_norm"])
-        sub = df[df["bin_id"].astype(str) == bin_id]["E_norm"]
-        sub = pd.to_numeric(sub, errors="coerce").dropna()
+        df = pd.read_csv(f, usecols=["bin_id", "E_1700band_mean", "E_norm"])
+        sub = df[df["bin_id"].astype(str) == bin_id][["E_1700band_mean", "E_norm"]]
+        sub["E_1700band_mean"] = pd.to_numeric(sub["E_1700band_mean"], errors="coerce")
+        sub["E_norm"] = pd.to_numeric(sub["E_norm"], errors="coerce")
+        sub = sub.dropna()
         if len(sub) > 0:
-            values.append(sub.to_numpy(dtype=float))
-    if not values:
-        return np.array([], dtype=float)
-    return np.concatenate(values)
+            e_vals.append(sub["E_1700band_mean"].to_numpy(dtype=float))
+            en_vals.append(sub["E_norm"].to_numpy(dtype=float))
+    if not e_vals:
+        return np.array([], dtype=float), np.array([], dtype=float)
+    return np.concatenate(e_vals), np.concatenate(en_vals)
 
 
-def plot_cdf(values: np.ndarray, bin_id: str, out_path: Path) -> None:
-    values = np.sort(values)
-    y = np.arange(1, len(values) + 1) / len(values)
-
+def plot_scatter(
+    e_vals: np.ndarray,
+    en_vals: np.ndarray,
+    bin_id: str,
+    out_path: Path,
+    logx: bool,
+) -> None:
     plt.figure(figsize=(6, 4))
-    plt.plot(values, y, linewidth=1.5)
-    plt.title(f"CDF of E_norm (bin_id={bin_id})")
-    plt.xlabel("E_norm")
-    plt.ylabel("CDF")
+    plt.scatter(e_vals, en_vals, s=6, alpha=0.6, edgecolors="none")
+    plt.title(f"E_1700band_mean vs E_norm (bin_id={bin_id})")
+    plt.xlabel("E_1700band_mean")
+    plt.ylabel("E_norm")
+    if logx:
+        plt.xscale("log")
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -127,9 +141,9 @@ def main() -> None:
         raise FileNotFoundError(f"No Step2 csv found in: {step2_dir}")
 
     bin_id = pick_random_bin_id(files, seed=args.seed)
-    values = collect_enorm(files, bin_id)
-    if len(values) == 0:
-        raise RuntimeError(f"No E_norm found for bin_id={bin_id}")
+    e_vals, en_vals = collect_pairs(files, bin_id)
+    if len(e_vals) == 0:
+        raise RuntimeError(f"No E_1700band_mean / E_norm found for bin_id={bin_id}")
 
     if args.out:
         out_path = Path(args.out)
@@ -137,7 +151,7 @@ def main() -> None:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         out_path = FIGURES_DIR / f"cdf_enorm_{ts}.png"
 
-    plot_cdf(values, bin_id, out_path)
+    plot_scatter(e_vals, en_vals, bin_id, out_path, logx=args.logx)
     print(f"Saved: {out_path}")
 
 
