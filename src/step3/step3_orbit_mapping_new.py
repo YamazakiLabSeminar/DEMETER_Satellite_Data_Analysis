@@ -232,8 +232,8 @@ def run_step3_orbit_mapping_new(
         window_end = eq_time
 
         cand = orbit_index[
-            (orbit_index["orbit_end_time"] > window_start)
-            & (orbit_index["orbit_start_time"] < window_end)
+            (orbit_index["orbit_end_time"] > window_end)
+            & (orbit_index["orbit_start_time"] < window_start)
         ].copy()
 
         if cand.empty:
