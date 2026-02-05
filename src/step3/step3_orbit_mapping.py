@@ -1,418 +1,428 @@
-# src/step3/step3_orbit_mapping.py
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple, List
 
 import numpy as np
 import pandas as pd
-import logging
 
 
 # ============================================================
-# Step3-1: 地震イベント ↔ 地震軌道（Step2出力） の紐づけ表を作る
-#
-# 仕様（あなたの文章に準拠）：
-# - UTC
-# - 地震発生前4時間以内: eq_time - 4h <= t <= eq_time
-# - 震央から330 km以内を通過する軌道を対象
-# - 距離<=330kmの「連続サンプル区間」のうち、最小距離点(t0)を含む区間を採用し
-#   その最初/最後のdatetimeを pass_time_start/end とする
-# - 1地震に複数軌道が該当する場合、closest_dis_km が最小の軌道を1本採用
-# - ただし、採用した330km区間に |mlat| > 65° が1点でもあればその地震イベントは除外
-#
-# 出力（Step3 orbit map）：
-# ["eq_id","eq_time","eq_lat","eq_lon","orbit_file","pass_time_start","pass_time_end",
-#  "orbit_datetime_start","orbit_datetime_end","closest_dis_km"]
+# 1) 設定（ここは必要に応じて変更）
 # ============================================================
-
-STEP2_USECOLS = ["datetime", "lat", "lon", "mlat", "mlon"]
-
 
 @dataclass(frozen=True)
-class OrbitIndexRow:
-    orbit_file: str
-    path: Path
-    orbit_datetime_start: pd.Timestamp
-    orbit_datetime_end: pd.Timestamp
+class Step3MappingConfig:
+    # 地震と軌道の条件
+    lead_hours: float = 4.0          # 地震の何時間前まで見るか（eq_time-4h <= t <= eq_time）
+    max_dist_km: float = 330.0       # 震央からの最大距離（km）
+    mlat_abs_limit: float = 65.0     # abs(mlat) > 65 を含む区間があれば除外
+
+    # 入出力ファイル名
+    orbit_index_name: str = "step3_orbit_index.csv"
+    orbit_map_name: str = "step3_orbit_map.csv"
 
 
-def _ensure_dir(p: Path) -> None:
-    p.mkdir(parents=True, exist_ok=True)
+# ============================================================
+# 2) 便利関数：CSVから先頭/末尾のdatetimeを高速に取る
+#    （巨大CSVを丸ごと読むのを避ける）
+# ============================================================
 
-
-def _pick_col(df: pd.DataFrame, candidates: list[str]) -> str:
-    for c in candidates:
-        if c in df.columns:
-            return c
-    raise ValueError(f"Missing required columns. Tried: {candidates}. Have: {list(df.columns)}")
-
-
-# -----------------------------
-# 距離：ヒュベニ（WGS84）
-# -----------------------------
-def hubeny_distance_km(
-    lat1_deg: np.ndarray,
-    lon1_deg: np.ndarray,
-    lat2_deg: float,
-    lon2_deg: float,
-) -> np.ndarray:
+def _parse_datetime_str(dt_str: str) -> pd.Timestamp:
     """
-    WGS84楕円体のヒュベニ公式（近距離向け）で距離[km]を返す。
-    入力：度（deg）
-    出力：km
+    文字列の日時を pandas Timestamp に変換する。
+    失敗したら例外を投げる（上位でログを出す想定）。
+    """
+    ts = pd.to_datetime(dt_str, errors="raise", utc=True)
+    return ts
+
+
+def get_first_last_datetime_csv(csv_path: Path, datetime_col: str = "datetime") -> Tuple[pd.Timestamp, pd.Timestamp]:
+    """
+    CSVファイルの datetime 列について、最初と最後のデータ行の値を返す。
+    - 先頭：ヘッダの次の最初のデータ行を読む
+    - 末尾：ファイル末尾から逆走して最後のデータ行を読む
+    """
+    # ---- 先頭行（最初のデータ） ----
+    with csv_path.open("r", encoding="utf-8", errors="ignore") as f:
+        header = f.readline().rstrip("\n")
+        cols = header.split(",")
+        if datetime_col not in cols:
+            raise ValueError(f"{csv_path.name}: '{datetime_col}' column not found in header.")
+        dt_idx = cols.index(datetime_col)
+
+        first_line = ""
+        while True:
+            line = f.readline()
+            if not line:
+                break
+            line = line.strip()
+            if line:
+                first_line = line
+                break
+        if not first_line:
+            raise ValueError(f"{csv_path.name}: no data lines found.")
+
+        first_dt_str = first_line.split(",")[dt_idx]
+        first_dt = _parse_datetime_str(first_dt_str)
+
+    # ---- 末尾行（最後のデータ） ----
+    # ファイル末尾から読んで、改行で区切って最後の非空行を取る
+    with csv_path.open("rb") as fb:
+        fb.seek(0, 2)  # ファイル末尾へ
+        size = fb.tell()
+        if size == 0:
+            raise ValueError(f"{csv_path.name}: empty file.")
+
+        block = b""
+        pos = size
+        # 末尾から少しずつ読み戻して、最後の改行まで拾う
+        while pos > 0:
+            read_size = min(4096, pos)
+            pos -= read_size
+            fb.seek(pos)
+            block = fb.read(read_size) + block
+            if b"\n" in block and block.count(b"\n") >= 2:
+                break
+
+        lines = block.splitlines()
+        # 末尾から空行を飛ばす
+        last_line_bytes = b""
+        for i in range(len(lines) - 1, -1, -1):
+            if lines[i].strip():
+                last_line_bytes = lines[i]
+                break
+        if not last_line_bytes:
+            raise ValueError(f"{csv_path.name}: could not find last data line.")
+
+        last_line = last_line_bytes.decode("utf-8", errors="ignore")
+        # 末尾がヘッダだけのケースを避ける（念のため）
+        if last_line.startswith("datetime") or last_line.startswith(header):
+            raise ValueError(f"{csv_path.name}: last line looks like header, invalid file format.")
+
+        last_dt_str = last_line.split(",")[dt_idx]
+        last_dt = _parse_datetime_str(last_dt_str)
+
+    return first_dt, last_dt
+
+
+# ============================================================
+# 3) 距離計算：ヒュベニ公式（WGS84）
+# ============================================================
+
+def hubeny_distance_km(lat1_deg: np.ndarray, lon1_deg: np.ndarray, lat2_deg: float, lon2_deg: float) -> np.ndarray:
+    """
+    ヒュベニ公式（WGS84）で、(lat1, lon1) の各点から (lat2, lon2) までの距離[km]を返す。
+    lat1_deg, lon1_deg: numpy配列（複数点）
+    lat2_deg, lon2_deg: スカラー（震央）
     """
     # WGS84
-    a = 6378137.0  # 長半径 [m]
-    f = 1.0 / 298.257223563
-    e2 = f * (2.0 - f)
+    a = 6378137.0                 # 長半径 [m]
+    f = 1 / 298.257223563         # 扁平率
+    b = a * (1 - f)               # 短半径 [m]
+    e2 = (a**2 - b**2) / a**2     # 第一離心率^2
 
     lat1 = np.deg2rad(lat1_deg)
     lon1 = np.deg2rad(lon1_deg)
     lat2 = np.deg2rad(lat2_deg)
     lon2 = np.deg2rad(lon2_deg)
 
+    latm = (lat1 + lat2) / 2.0
     dlat = lat1 - lat2
     dlon = lon1 - lon2
 
-    latm = (lat1 + lat2) / 2.0
     sin_latm = np.sin(latm)
+    w = np.sqrt(1.0 - e2 * (sin_latm**2))
+    m = a * (1.0 - e2) / (w**3)   # 子午線曲率半径 [m]
+    n = a / w                     # 卯酉線曲率半径 [m]
 
-    w = np.sqrt(1.0 - e2 * sin_latm * sin_latm)
-    m = a * (1.0 - e2) / (w**3)  # 子午線曲率半径
-    n = a / w                    # 卯酉線曲率半径
+    dy = m * dlat
+    dx = n * np.cos(latm) * dlon
 
-    dy = dlat * m
-    dx = dlon * n * np.cos(latm)
-
-    dist_m = np.sqrt(dx * dx + dy * dy)
+    dist_m = np.sqrt(dx**2 + dy**2)
     return dist_m / 1000.0
 
 
-def _contiguous_segments(mask: np.ndarray) -> list[tuple[int, int]]:
+# ============================================================
+# 4) 距離<=330km の「最小距離点を含む連続区間」を取る
+# ============================================================
+
+def find_segment_around_min(mask: np.ndarray, idx_min: int) -> Tuple[int, int]:
     """
-    mask=True の連続区間を (start_idx, end_idx) のリストで返す（end_idxは含む）。
+    mask が True の連続区間のうち、idx_min を含む区間の [start_idx, end_idx] を返す。
+    end_idx は inclusive（両端含む）。
     """
-    if mask.size == 0:
-        return []
-    m = mask.astype(np.int8)
+    n = len(mask)
+    start = idx_min
+    end = idx_min
 
-    # 立ち上がり(0->1) と立ち下がり(1->0) を検出
-    diff = np.diff(m, prepend=0, append=0)
-    starts = np.where(diff == 1)[0]
-    ends = np.where(diff == -1)[0] - 1
+    while start - 1 >= 0 and mask[start - 1]:
+        start -= 1
+    while end + 1 < n and mask[end + 1]:
+        end += 1
 
-    return list(zip(starts.tolist(), ends.tolist()))
+    return start, end
 
 
-def build_orbit_index(step2_dir: Path, logger: logging.Logger) -> list[OrbitIndexRow]:
+# ============================================================
+# 5) メイン処理：orbit_index作成 → 地震ごとに最良軌道を選ぶ
+# ============================================================
+
+def build_orbit_index(step2_dir: Path, out_csv: Path) -> pd.DataFrame:
     """
-    Step2出力フォルダの各CSVについて、orbit_datetime_start/end を作る。
-    ファイル全体を読み込まず、datetime列だけをストリーミングで末尾まで走査する（安全寄り）。
+    step2_dir の全CSVについて、(orbit_file, orbit_start_time, orbit_end_time) を作り CSV 出力する。
     """
-    files = sorted(step2_dir.glob("*.csv"))
-    if not files:
-        raise FileNotFoundError(f"No Step2 csv found: {step2_dir}")
+    rows = []
+    csv_files = sorted(step2_dir.glob("*.csv"))
+    total_files = len(csv_files)
+    progress_every = max(1, total_files // 20)  # 5%刻みで表示
 
-    index_rows: list[OrbitIndexRow] = []
-
-    for i, path in enumerate(files, start=1):
-        logger.info(f"[INDEX {i}/{len(files)}] {path.name}")
-
-        # 先頭1行で開始時刻
-        head = pd.read_csv(path, usecols=["datetime"], nrows=1)
-        if head.empty:
-            continue
-        t_start = pd.to_datetime(head.loc[0, "datetime"], errors="coerce", utc=True)
-        if pd.isna(t_start):
-            continue
-
-        # 末尾はチャンクで最終datetimeを拾う
-        t_end: Optional[pd.Timestamp] = None
-        for chunk in pd.read_csv(path, usecols=["datetime"], chunksize=200_000):
-            if chunk.empty:
-                continue
-            dt = pd.to_datetime(chunk["datetime"], errors="coerce", utc=True)
-            dt = dt.dropna()
-            if len(dt) > 0:
-                t_end = dt.iloc[-1]
-
-        if t_end is None or pd.isna(t_end):
-            continue
-
-        index_rows.append(
-            OrbitIndexRow(
-                orbit_file=path.name,
-                path=path,
-                orbit_datetime_start=t_start,
-                orbit_datetime_end=t_end,
-            )
-        )
-
-    logger.info(f"Orbit index built: {len(index_rows)} files indexed.")
-    return index_rows
-
-
-def _read_step2_window(path: Path, t_min: pd.Timestamp, t_max: pd.Timestamp) -> pd.DataFrame:
-    """
-    Step2 CSVを読み、t_min<=datetime<=t_max の区間だけ残す。
-    最初はusecolsで最小限のみ読む（速度とメモリ節約）。
-    """
-    df = pd.read_csv(path, usecols=STEP2_USECOLS)
-
-    df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce", utc=True)
-    for c in ["lat", "lon", "mlat", "mlon"]:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
-
-    df = df.dropna(subset=["datetime", "lat", "lon", "mlat"])
-    df = df[(df["datetime"] >= t_min) & (df["datetime"] <= t_max)].copy()
-    df = df.sort_values("datetime").reset_index(drop=True)
-    return df
-
-
-def _choose_best_orbit_for_eq(
-    eq_time: pd.Timestamp,
-    eq_lat: float,
-    eq_lon: float,
-    orbit_index: list[OrbitIndexRow],
-    lead_hours: float,
-    dist_km_max: float,
-    mlat_abs_max: float,
-    logger: logging.Logger,
-) -> Optional[dict]:
-    """
-    1地震イベントに対して、条件に合う軌道を探索し、
-    closest_dis_km が最小の軌道1本を返す（無ければNone）。
-    返すdictは出力行に対応するキーを持つ。
-    """
-    t_min = eq_time - pd.Timedelta(hours=lead_hours)
-    t_max = eq_time
-
-    # 時間範囲で候補を先に絞る（ファイルを無駄に開かない）
-    candidates = [
-        r for r in orbit_index
-        if (r.orbit_datetime_end >= t_min) and (r.orbit_datetime_start <= t_max)
-    ]
-
-    if not candidates:
-        return None
-
-    best_row: Optional[dict] = None
-    best_dist = np.inf
-
-    for r in candidates:
-        df = _read_step2_window(r.path, t_min, t_max)
-        if df.empty:
-            continue
-
-        d_km = hubeny_distance_km(df["lat"].to_numpy(float), df["lon"].to_numpy(float), eq_lat, eq_lon)
-        within = d_km <= dist_km_max
-        if not np.any(within):
-            continue
-
-        # 「距離<=330km」の連続区間を列挙
-        segments = _contiguous_segments(within)
-
-        # 最小距離点（t0）は “within==True の中での最小” を採用
-        idx_within = np.where(within)[0]
-        idx_min = idx_within[np.argmin(d_km[idx_within])]
-
-        # idx_min を含むセグメントを採用
-        chosen_seg = None
-        for s, e in segments:
-            if s <= idx_min <= e:
-                chosen_seg = (s, e)
-                break
-        if chosen_seg is None:
-            # 理論上起きにくいが保険
-            continue
-
-        s, e = chosen_seg
-        seg = df.iloc[s : e + 1].copy()
-
-        # mlat除外条件：採用した330km区間に |mlat| > 65° が含まれるなら、この地震イベントは除外
-        if np.any(np.abs(seg["mlat"].to_numpy(float)) > mlat_abs_max):
-            # “イベント除外”仕様なので、他の軌道を見ても最終的に除外扱いにしたい。
-            # ここではフラグを返して上位でイベントごと除外できるようにする。
-            return {"__EXCLUDE_EVENT__": True}
-
-        pass_start = seg["datetime"].iloc[0]
-        pass_end = seg["datetime"].iloc[-1]
-
-        closest_dis_km = float(np.min(d_km[s : e + 1]))
-
-        # ここまで来たら「有効な軌道候補」
-        if closest_dis_km < best_dist:
-            best_dist = closest_dis_km
-            best_row = {
-                "orbit_file": r.orbit_file,
-                "pass_time_start": pass_start,
-                "pass_time_end": pass_end,
-                "orbit_datetime_start": r.orbit_datetime_start,
-                "orbit_datetime_end": r.orbit_datetime_end,
-                "closest_dis_km": closest_dis_km,
+    for i, csv_path in enumerate(csv_files, start=1):
+        first_dt, last_dt = get_first_last_datetime_csv(csv_path, datetime_col="datetime")
+        rows.append(
+            {
+                "orbit_file": csv_path.name,
+                "orbit_start_time": first_dt.isoformat(),
+                "orbit_end_time": last_dt.isoformat(),
             }
+        )
+        if (i == 1) or (i % progress_every == 0) or (i == total_files):
+            pct = (i / total_files) * 100.0 if total_files > 0 else 100.0
+            print(f"[INDEX] {i}/{total_files} ({pct:.1f}%)")
 
-    return best_row
+    df_index = pd.DataFrame(rows)
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+    df_index.to_csv(out_csv, index=False, encoding="utf-8")
+    return df_index
 
 
 def run_step3_orbit_mapping(
     eq_catalog_path: Path,
     step2_dir: Path,
-    out_csv_path: Path,
-    logger: logging.Logger,
-    lead_hours: float = 4.0,
-    dist_km_max: float = 330.0,
-    mlat_abs_max: float = 65.0,
+    tables_dir: Path,
+    cfg: Optional[Step3MappingConfig] = None,
+    logger=None,
 ) -> None:
     """
-    Step3-1：地震-軌道紐づけ表（step3_orbit_map.csv）を作成する。
-
-    - eq_catalog_path: 地震カタログCSV（デクラスタ済み本震）
-    - step2_dir: Step2出力フォルダ（E:\\interim\\step2_normalized）
-    - out_csv_path: 出力（E:\\tables\\step3_orbit_map.csv）
+    Step3-1:
+    - step3_orbit_index.csv を作成
+    - step3_orbit_map.csv（地震↔軌道の紐づけ表）を作成
     """
-    if not eq_catalog_path.exists():
-        raise FileNotFoundError(f"EQ catalog not found: {eq_catalog_path}")
-    if not step2_dir.exists():
-        raise FileNotFoundError(f"Step2 dir not found: {step2_dir}")
+    if cfg is None:
+        cfg = Step3MappingConfig()
 
-    _ensure_dir(out_csv_path.parent)
+    tables_dir.mkdir(parents=True, exist_ok=True)
+    orbit_index_path = tables_dir / cfg.orbit_index_name
+    orbit_map_path = tables_dir / cfg.orbit_map_name
 
-    # ---------- 地震カタログ読み込み ----------
-    eq = pd.read_csv(eq_catalog_path)
+    # ---------- ログ関数（loggerが無ければprint） ----------
+    def log_info(msg: str) -> None:
+        if logger is not None:
+            logger.info(msg)
+        else:
+            print(msg)
 
-    col_time = _pick_col(eq, ["eq_time", "time", "datetime", "origin_time", "ot"])
-    col_lat = _pick_col(eq, ["eq_lat", "lat", "latitude"])
-    col_lon = _pick_col(eq, ["eq_lon", "lon", "longitude"])
-    col_id = None
-    for cand in ["eq_id", "id", "event_id"]:
-        if cand in eq.columns:
-            col_id = cand
-            break
+    def log_warn(msg: str) -> None:
+        if logger is not None:
+            logger.warning(msg)
+        else:
+            print(f"[WARN] {msg}")
 
-    eq_time = pd.to_datetime(eq[col_time], errors="coerce", utc=True)
-    eq_lat = pd.to_numeric(eq[col_lat], errors="coerce")
-    eq_lon = pd.to_numeric(eq[col_lon], errors="coerce")
+    # ---------- 1) 地震カタログ読み込み ----------
+    log_info(f"Read earthquake catalog: {eq_catalog_path}")
+    eq_df = pd.read_csv(eq_catalog_path)
 
-    eq = eq.assign(eq_time=eq_time, eq_lat=eq_lat, eq_lon=eq_lon).dropna(subset=["eq_time", "eq_lat", "eq_lon"]).copy()
+    required_eq_cols = ["latitude", "longitude", "magnitude", "datetime", "event_id"]
+    missing = [c for c in required_eq_cols if c not in eq_df.columns]
+    if missing:
+        raise ValueError(f"eq_catalog missing columns: {missing}")
 
-    if col_id is None:
-        eq["eq_id"] = np.arange(1, len(eq) + 1, dtype=int)
+    eq_df = eq_df[required_eq_cols].copy()
+    # datetime はUTCにする（文字列でもここでUTC化しておく）
+    eq_df["datetime"] = pd.to_datetime(eq_df["datetime"], utc=True, errors="raise")
+
+    # ---------- 2) orbit index を作成（または読み込み） ----------
+    if orbit_index_path.exists():
+        log_info(f"Load orbit index: {orbit_index_path}")
+        orbit_index = pd.read_csv(orbit_index_path)
     else:
-        eq["eq_id"] = eq[col_id]
+        log_info(f"Build orbit index from Step2 outputs: {step2_dir}")
+        orbit_index = build_orbit_index(step2_dir=step2_dir, out_csv=orbit_index_path)
 
-    eq = eq.sort_values("eq_time").reset_index(drop=True)
+    # orbit_start/end をdatetime化（UTC）
+    orbit_index["orbit_start_time"] = pd.to_datetime(
+        orbit_index["orbit_start_time"], utc=True, errors="raise", format="mixed"
+    )
+    orbit_index["orbit_end_time"] = pd.to_datetime(
+        orbit_index["orbit_end_time"], utc=True, errors="raise", format="mixed"
+    )
 
-    logger.info(f"EQ catalog loaded: {len(eq)} events")
+    # ---------- 3) 地震ごとに候補軌道を絞って評価 ----------
+    lead_td = timedelta(hours=cfg.lead_hours)
 
-    # ---------- 軌道インデックス ----------
-    orbit_index = build_orbit_index(step2_dir, logger)
+    out_rows: List[dict] = []
+    n_no_match = 0
+    n_multi_candidates = 0
+    total_eq = len(eq_df)
+    progress_every_eq = max(1, total_eq // 20)  # 5%刻みで表示
 
-    # ---------- 紐づけ ----------
-    rows: list[dict] = []
-    unlinked = 0
-    excluded = 0
-    multi_candidate = 0  # “複数軌道が該当” の数を後で数えるため（簡易）
+    def report_map_progress(i: int) -> None:
+        if (i == 1) or (i % progress_every_eq == 0) or (i == total_eq):
+            pct = (i / total_eq) * 100.0 if total_eq > 0 else 100.0
+            log_info(
+                f"[MAP] {i}/{total_eq} ({pct:.1f}%) "
+                f"linked={len(out_rows)} no_link={n_no_match} multi_cand={n_multi_candidates}"
+            )
 
-    for i, r in eq.iterrows():
-        eid = r["eq_id"]
-        et = r["eq_time"]
-        elat = float(r["eq_lat"])
-        elon = float(r["eq_lon"])
+    for i, (_, eq) in enumerate(eq_df.iterrows(), start=1):
+        eq_id = eq["event_id"]
+        eq_time = eq["datetime"]
+        eq_lat = float(eq["latitude"])
+        eq_lon = float(eq["longitude"])
 
-        # 候補軌道数（時間範囲だけ）を数える → 「複数該当」の粗い指標
-        t_min = et - pd.Timedelta(hours=lead_hours)
-        t_max = et
-        candidates = [
-            o for o in orbit_index
-            if (o.orbit_datetime_end >= t_min) and (o.orbit_datetime_start <= t_max)
-        ]
-        if len(candidates) >= 2:
-            multi_candidate += 1
+        window_start = eq_time - lead_td
+        window_end = eq_time
 
-        best = _choose_best_orbit_for_eq(
-            eq_time=et,
-            eq_lat=elat,
-            eq_lon=elon,
-            orbit_index=orbit_index,
-            lead_hours=lead_hours,
-            dist_km_max=dist_km_max,
-            mlat_abs_max=mlat_abs_max,
-            logger=logger,
-        )
+        # (orbit_end > window_start) and (orbit_start < window_end)
+        cand = orbit_index[
+            (orbit_index["orbit_end_time"] > window_start) &
+            (orbit_index["orbit_start_time"] < window_end)
+        ].copy()
 
-        if best is None:
-            unlinked += 1
+        if cand.empty:
+            n_no_match += 1
+            report_map_progress(i)
             continue
 
-        # イベント除外フラグ（mlat条件）
-        if best.get("__EXCLUDE_EVENT__"):
-            excluded += 1
+        # 候補が複数ある場合のカウント（後で確認用）
+        if len(cand) > 1:
+            n_multi_candidates += 1
+
+        best_row: Optional[dict] = None
+        best_closest = np.inf
+
+        # 「mlat高緯度でイベント除外」フラグ
+        excluded_by_mlat = False
+
+        for _, ob in cand.iterrows():
+            orbit_file = ob["orbit_file"]
+            orbit_start = ob["orbit_start_time"]
+            orbit_end = ob["orbit_end_time"]
+
+            orbit_path = step2_dir / orbit_file
+            if not orbit_path.exists():
+                log_warn(f"Orbit file not found: {orbit_path}")
+                continue
+
+            # 軌道データ読み込み（必要最小限の列だけ）
+            try:
+                df = pd.read_csv(
+                    orbit_path,
+                    usecols=["datetime", "lat", "lon", "mlat", "mlon"],
+                )
+            except Exception as e:
+                log_warn(f"Failed reading {orbit_file}: {e}")
+                continue
+
+            # datetime をUTCに
+            try:
+                df["datetime"] = pd.to_datetime(
+                    df["datetime"], utc=True, errors="raise", format="mixed"
+                )
+            except Exception as e:
+                log_warn(f"{orbit_file}: datetime parse failed: {e}")
+                continue
+
+            # 地震の4時間窓に限定（無駄計算を減らす）
+            df = df[(df["datetime"] >= window_start) & (df["datetime"] <= window_end)].copy()
+            if df.empty:
+                continue
+
+            # 欠損がある行は距離計算できないので落とす（連続区間の分断にもなる）
+            df = df.dropna(subset=["lat", "lon", "mlat"])
+            if df.empty:
+                continue
+
+            lat_arr = df["lat"].to_numpy(dtype="float64")
+            lon_arr = df["lon"].to_numpy(dtype="float64")
+            mlat_arr = df["mlat"].to_numpy(dtype="float64")
+            dt_arr = df["datetime"].to_numpy()
+
+            # 距離計算（ヒュベニ）
+            dist_km = hubeny_distance_km(lat_arr, lon_arr, eq_lat, eq_lon)
+
+            # 距離<=330km の区間があるか？
+            mask = dist_km <= cfg.max_dist_km
+            if not np.any(mask):
+                # この候補軌道は不採用 → 次の候補へ
+                continue
+
+            # 「距離<=330km 区間内」で最小距離点（idx_min）
+            # 注意：mask True の部分だけで argmin を取る
+            idx_true = np.where(mask)[0]
+            idx_min = idx_true[np.argmin(dist_km[idx_true])]
+
+            seg_start, seg_end = find_segment_around_min(mask, idx_min)
+
+            # 330km区間内でのmlat除外判定（ここが仕様のキモ）
+            if np.any(np.abs(mlat_arr[seg_start:seg_end + 1]) > cfg.mlat_abs_limit):
+                excluded_by_mlat = True
+                break  # 以後すべての候補を見ずに地震イベント除外
+
+            pass_time_start = pd.Timestamp(dt_arr[seg_start]).isoformat()
+            pass_time_end = pd.Timestamp(dt_arr[seg_end]).isoformat()
+
+            closest_in_seg = float(np.min(dist_km[seg_start:seg_end + 1]))
+
+            # 1地震イベントについて最小距離が最小の軌道を採用
+            if closest_in_seg < best_closest:
+                best_closest = closest_in_seg
+                best_row = {
+                    "eq_id": eq_id,
+                    "eq_time": eq_time.isoformat(),
+                    "eq_lat": eq_lat,
+                    "eq_lon": eq_lon,
+                    "orbit_file": orbit_file,
+                    "orbit_start_time": orbit_start.isoformat(),
+                    "orbit_end_time": orbit_end.isoformat(),
+                    "pass_time_start": pass_time_start,
+                    "pass_time_end": pass_time_end,
+                    "closest_dis_km": closest_in_seg,
+                }
+
+        # イベント除外（高緯度が区間内に含まれた）
+        if excluded_by_mlat:
+            report_map_progress(i)
             continue
 
-        rows.append(
-            {
-                "eq_id": eid,
-                "eq_time": et,
-                "eq_lat": elat,
-                "eq_lon": elon,
-                "orbit_file": best["orbit_file"],
-                "pass_time_start": best["pass_time_start"],
-                "pass_time_end": best["pass_time_end"],
-                "orbit_datetime_start": best["orbit_datetime_start"],
-                "orbit_datetime_end": best["orbit_datetime_end"],
-                "closest_dis_km": best["closest_dis_km"],
-            }
-        )
+        # 全候補不採用 → 紐づけなし
+        if best_row is None:
+            n_no_match += 1
+            report_map_progress(i)
+            continue
 
-        if (i + 1) % 100 == 0:
-            logger.info(f"[MAP] processed {i+1}/{len(eq)}")
+        out_rows.append(best_row)
+        report_map_progress(i)
 
-    out = pd.DataFrame(rows)
+    # ---------- 4) 出力 ----------
+    out_df = pd.DataFrame(out_rows)
 
-    # 出力の型を整える（datetimeをISO文字列にしても良いが、CSVならdatetimeのままでもOK）
-    out = out.sort_values(["eq_time", "eq_id"]).reset_index(drop=True)
-    out.to_csv(out_csv_path, index=False, encoding="utf-8")
+    # 指定ヘッダ順に揃える（列欠けを防ぐ）
+    columns = [
+        "eq_id", "eq_time", "eq_lat", "eq_lon",
+        "orbit_file", "orbit_start_time", "orbit_end_time",
+        "pass_time_start", "pass_time_end",
+        "closest_dis_km",
+    ]
+    for c in columns:
+        if c not in out_df.columns:
+            out_df[c] = np.nan
+    out_df = out_df[columns]
 
-    logger.info("=== Step3 orbit mapping done ===")
-    logger.info(f"linked   = {len(out)}")
-    logger.info(f"unlinked = {unlinked}")
-    logger.info(f"excluded(|mlat|>{mlat_abs_max} in pass segment) = {excluded}")
-    logger.info(f"multi_candidate(time-overlap>=2) = {multi_candidate}")
-    logger.info(f"saved: {out_csv_path}")
+    out_df.to_csv(orbit_map_path, index=False, encoding="utf-8")
 
-
-# （後で src/step3/main.py を作るときに、この関数を呼べばOK）
-def run_step3_orbit_mapping_default_paths(cfg: dict, logger: logging.Logger) -> None:
-    """
-    paths.py（SSD割当）に従って、標準の入出力パスで実行するためのラッパ。
-    - 地震カタログパスは cfg から読めるようにしておく（後でmain.pyで使いやすい）
-    """
-    from ..paths import EXTERNAL_DIR, INTERIM_DIR, TABLES_DIR
-
-    eq_rel = cfg.get("eq", {}).get(
-        "catalog_relpath",
-        r"eq_catalog\eq_m4.8above_depth40kmbelow_200407-201012.csv",
-    )
-    eq_catalog_path = EXTERNAL_DIR / Path(eq_rel)
-
-    step2_dirname = cfg.get("io", {}).get("step2_dirname", "step2_normalized")
-    step2_dir = INTERIM_DIR / step2_dirname
-
-    out_csv_path = TABLES_DIR / "step3_orbit_map.csv"
-
-    lead_hours = float(cfg.get("eq", {}).get("lead_hours", 4.0))
-    dist_km_max = float(cfg.get("eq", {}).get("dist_km_max", 330.0))
-    mlat_abs_max = float(cfg.get("eq", {}).get("mlat_abs_max", 65.0))
-
-    run_step3_orbit_mapping(
-        eq_catalog_path=eq_catalog_path,
-        step2_dir=step2_dir,
-        out_csv_path=out_csv_path,
-        logger=logger,
-        lead_hours=lead_hours,
-        dist_km_max=dist_km_max,
-        mlat_abs_max=mlat_abs_max,
-    )
+    log_info(f"Saved orbit map: {orbit_map_path} (rows={len(out_df)})")
+    log_info(f"No-link events count (rough): {n_no_match}")
+    log_info(f"Events with multiple time-overlap candidates: {n_multi_candidates}")
