@@ -9,6 +9,13 @@ import pandas as pd
 
 
 REQUIRED_COLS = ["latitude", "longitude", "magnitude", "datetime", "event_id"]
+COL_CANDIDATES = {
+    "latitude": ["latitude", "lat", "eq_lat"],
+    "longitude": ["longitude", "lon", "eq_lon"],
+    "magnitude": ["magnitude", "mag", "mw", "ml"],
+    "datetime": ["datetime", "time", "origin_time", "ot"],
+    "event_id": ["event_id", "id", "eq_id"],
+}
 
 
 @dataclass(frozen=True)
@@ -22,6 +29,33 @@ def _log_info(logger, msg: str) -> None:
         print(msg)
     else:
         logger.info(msg)
+
+
+def _pick_column(df: pd.DataFrame, canonical: str) -> str:
+    for cand in COL_CANDIDATES[canonical]:
+        if cand in df.columns:
+            return cand
+    raise ValueError(
+        f"Input CSV missing '{canonical}' column. "
+        f"Tried: {COL_CANDIDATES[canonical]}, have: {list(df.columns)}"
+    )
+
+
+def _normalize_columns(df: pd.DataFrame, logger=None) -> pd.DataFrame:
+    """
+    列名の揺れを吸収して、REQUIRED_COLS を持つDataFrameに正規化する。
+    """
+    picked = {k: _pick_column(df, k) for k in REQUIRED_COLS}
+    _log_info(
+        logger,
+        "Column mapping: "
+        + ", ".join([f"{k}<-{v}" for k, v in picked.items()]),
+    )
+    out = df.copy()
+    for canonical, src in picked.items():
+        if canonical != src:
+            out[canonical] = out[src]
+    return out
 
 
 def _to_hmtk_catalog(df: pd.DataFrame):
@@ -76,9 +110,7 @@ def run_gardner_knopoff_declustering(
         raise FileNotFoundError(f"Input CSV not found: {in_csv}")
 
     df = pd.read_csv(in_csv)
-    missing = [c for c in REQUIRED_COLS if c not in df.columns]
-    if missing:
-        raise ValueError(f"Input CSV missing columns: {missing}")
+    df = _normalize_columns(df, logger=logger)
 
     # 入力順依存を避けるため時刻で並べる
     df = df.copy()
