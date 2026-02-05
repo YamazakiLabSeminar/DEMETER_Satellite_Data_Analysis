@@ -73,9 +73,9 @@ def main() -> None:
     logger.info(f"logs_dir        = {LOGS_DIR}")
 
     # ===== 5) Step3-1 本体を呼ぶ =====
-    from .step3_orbit_mapping import run_step3_orbit_mapping
+    from .step3_orbit_mapping_new import run_step3_orbit_mapping_new
 
-    run_step3_orbit_mapping(
+    run_step3_orbit_mapping_new(
         eq_catalog_path=eq_catalog_path,
         step2_dir=step2_dir,
         tables_dir=TABLES_DIR,

@@ -303,9 +303,6 @@ def run_step3_orbit_mapping(
         best_row: Optional[dict] = None
         best_closest = np.inf
 
-        # 「mlat高緯度でイベント除外」フラグ
-        excluded_by_mlat = False
-
         for _, ob in cand.iterrows():
             orbit_file = ob["orbit_file"]
             orbit_start = ob["orbit_start_time"]
@@ -366,11 +363,6 @@ def run_step3_orbit_mapping(
 
             seg_start, seg_end = find_segment_around_min(mask, idx_min)
 
-            # 330km区間内でのmlat除外判定（ここが仕様のキモ）
-            if np.any(np.abs(mlat_arr[seg_start:seg_end + 1]) > cfg.mlat_abs_limit):
-                excluded_by_mlat = True
-                break  # 以後すべての候補を見ずに地震イベント除外
-
             pass_time_start = pd.Timestamp(dt_arr[seg_start]).isoformat()
             pass_time_end = pd.Timestamp(dt_arr[seg_end]).isoformat()
 
@@ -391,11 +383,6 @@ def run_step3_orbit_mapping(
                     "pass_time_end": pass_time_end,
                     "closest_dis_km": closest_in_seg,
                 }
-
-        # イベント除外（高緯度が区間内に含まれた）
-        if excluded_by_mlat:
-            report_map_progress(i)
-            continue
 
         # 全候補不採用 → 紐づけなし
         if best_row is None:
