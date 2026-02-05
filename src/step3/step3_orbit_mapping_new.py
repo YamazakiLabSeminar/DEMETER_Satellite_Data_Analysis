@@ -32,7 +32,7 @@ def _log_warn(logger, msg: str) -> None:
 
 
 def _parse_datetime_str(dt_str: str) -> pd.Timestamp:
-    return pd.to_datetime(dt_str, errors="raise", utc=True)
+    return pd.to_datetime(dt_str, errors="raise")
 
 
 def get_first_last_datetime_csv(
@@ -181,6 +181,7 @@ def run_step3_orbit_mapping_new(
         raise ValueError(f"eq_catalog missing columns: {missing_cols}")
 
     eq_df = eq_df[required_eq_cols].copy()
+    eq_df["time"] = pd.to_datetime(eq_df["time"], errors="raise", format="mixed")
 
     if orbit_index_path.exists():
         _log_info(logger, f"Load orbit index: {orbit_index_path}")
@@ -188,6 +189,13 @@ def run_step3_orbit_mapping_new(
     else:
         _log_info(logger, f"Build orbit index from Step2 outputs: {step2_dir}")
         orbit_index = build_orbit_index(step2_dir=step2_dir, out_csv=orbit_index_path, logger=logger)
+
+    orbit_index["orbit_start_time"] = pd.to_datetime(
+        orbit_index["orbit_start_time"], errors="raise", format="mixed"
+    )
+    orbit_index["orbit_end_time"] = pd.to_datetime(
+        orbit_index["orbit_end_time"], errors="raise", format="mixed"
+    )
 
     lead_td = timedelta(hours=cfg.lead_hours)
     out_rows: List[dict] = []
@@ -207,7 +215,7 @@ def run_step3_orbit_mapping_new(
             )
 
     for i, (_, eq) in enumerate(eq_df.iterrows(), start=1):
-        eq_time = pd.Timestamp(eq["time"])
+        eq_time = eq["time"]
         eq_lat = float(eq["latitude"])
         eq_lon = float(eq["longitude"])
 
@@ -244,6 +252,12 @@ def run_step3_orbit_mapping_new(
                 df = pd.read_csv(orbit_path, usecols=["datetime", "lat", "lon", "mlat", "mlon"])
             except Exception as e:
                 _log_warn(logger, f"Failed reading {orbit_file}: {e}")
+                continue
+
+            try:
+                df["datetime"] = pd.to_datetime(df["datetime"], errors="raise", format="mixed")
+            except Exception as e:
+                _log_warn(logger, f"{orbit_file}: datetime parse failed: {e}")
                 continue
 
             df = df[(df["datetime"] >= window_start) & (df["datetime"] <= window_end)].copy()
