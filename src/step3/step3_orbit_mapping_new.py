@@ -32,7 +32,10 @@ def _log_warn(logger, msg: str) -> None:
 
 
 def _parse_datetime_str(dt_str: str) -> pd.Timestamp:
-    return pd.to_datetime(dt_str, errors="raise")
+    ts = pd.to_datetime(dt_str, errors="raise")
+    if getattr(ts, "tzinfo", None) is not None:
+        ts = ts.tz_localize(None)
+    return ts
 
 
 def get_first_last_datetime_csv(
@@ -182,6 +185,8 @@ def run_step3_orbit_mapping_new(
 
     eq_df = eq_df[required_eq_cols].copy()
     eq_df["time"] = pd.to_datetime(eq_df["time"], errors="raise", format="mixed")
+    if getattr(eq_df["time"].dt, "tz", None) is not None:
+        eq_df["time"] = eq_df["time"].dt.tz_localize(None)
 
     if orbit_index_path.exists():
         _log_info(logger, f"Load orbit index: {orbit_index_path}")
@@ -196,6 +201,10 @@ def run_step3_orbit_mapping_new(
     orbit_index["orbit_end_time"] = pd.to_datetime(
         orbit_index["orbit_end_time"], errors="raise", format="mixed"
     )
+    if getattr(orbit_index["orbit_start_time"].dt, "tz", None) is not None:
+        orbit_index["orbit_start_time"] = orbit_index["orbit_start_time"].dt.tz_localize(None)
+    if getattr(orbit_index["orbit_end_time"].dt, "tz", None) is not None:
+        orbit_index["orbit_end_time"] = orbit_index["orbit_end_time"].dt.tz_localize(None)
 
     lead_td = timedelta(hours=cfg.lead_hours)
     out_rows: List[dict] = []
@@ -256,6 +265,8 @@ def run_step3_orbit_mapping_new(
 
             try:
                 df["datetime"] = pd.to_datetime(df["datetime"], errors="raise", format="mixed")
+                if getattr(df["datetime"].dt, "tz", None) is not None:
+                    df["datetime"] = df["datetime"].dt.tz_localize(None)
             except Exception as e:
                 _log_warn(logger, f"{orbit_file}: datetime parse failed: {e}")
                 continue
