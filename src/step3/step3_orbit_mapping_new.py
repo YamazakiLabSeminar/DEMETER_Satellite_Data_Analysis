@@ -207,7 +207,7 @@ def run_step3_orbit_mapping_new(
             )
 
     for i, (_, eq) in enumerate(eq_df.iterrows(), start=1):
-        eq_time = eq["time"]
+        eq_time = pd.Timestamp(eq["time"])
         eq_lat = float(eq["latitude"])
         eq_lon = float(eq["longitude"])
 
