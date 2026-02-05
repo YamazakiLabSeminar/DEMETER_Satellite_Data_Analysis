@@ -1723,13 +1723,13 @@ Step2で正規化済みデータ(E_norm)から、震央付近にある地震先�
 ---
 ### 2. 地震軌道の抽出
 #### 内容：
-1. デクラスタリング後の本震のみのカタログから```["latitude", "longitude", "magnitude", "datetime", "event_id"]```を地震発生緯度、経度、震度、地震発生日時、地震イベントidとして読み取る。
+1. デクラスタリング後の本震のみのカタログから```["latitude", "longitude", "mag", "time"]```を地震発生緯度、経度、震度、地震発生日時として読み取る。
 
 2. Step2出力(正規化後データ)の全csvファイルについて、
     - 軌道ファイルの最初と最後の日時```["datetime"]```を調べて、["ファイル名", "開始時刻", "終了時刻"]が乗せた軌道indexリストを作成し、```step3_orbit_index.csv```として出力する。
 
 3. 各地震イベントについて、
-    - step3_orbit_index.csvを読み取り、軌道ファイルの["開始時刻", "終了時刻"]時間区間が, 地震発生4時間前の時間帯と重なる部分があれば、その軌道の[ファイル名、軌道開始/終了時刻]と対応する[地震イベントid、地震発生緯度/経度、震度、地震発生日時]、を抽出し、新規の候補リストに追加する。
+    - step3_orbit_index.csvを読み取り、軌道ファイルの["開始時刻", "終了時刻"]時間区間が, 地震発生4時間前の時間帯と重なる部分があれば、その軌道の[ファイル名、軌道開始/終了時刻]と対応する[地震発生緯度/経度、震度、地震発生日時]、を抽出し、新規の候補リストに追加する。
         - 軌道ファイルの"終了時刻">[地震発生時刻-4h]、かつ、軌道ファイルの"開始時刻"<地震発生時刻
 
     - 候補リストにある軌道ファイル(step2出力)を読み、各サンプルの震央からの距離をヒュベニ公式(WGS84)で計算し、
@@ -1742,7 +1742,7 @@ Step2で正規化済みデータ(E_norm)から、震央付近にある地震先�
 
 4. 候補リストを以下のようにcsvファイルとして出力する。
     - 地震イベントid、地震発生時刻、地震発生緯度、地震発生経度、軌道ファイル名、軌道開始時間、軌道終了時間、区間入り時間、区間出る時間、衛星が距離<=330km区間内での震央からの最小距離、を乗せる。
-    - [ "eq_id", "eq_time", "eq_lat", "eq_lon",
+    - ["eq_time", "eq_lat", "eq_lon",
      "orbit_file", "orbit_start_time", "orbit_end_time", 
      "pass_time_start", "pass_time_end", 
      "closest_dis_km"]
@@ -1751,9 +1751,9 @@ Step2で正規化済みデータ(E_norm)から、震央付近にある地震先�
 1. 地震カタログ：
 - パス: ```"F:\external\eq_catalog\all_eq_declustring_30day_30km.csv"```
 
-- 使用列:```["latitude", "longitude", "magnitude", "datetime", "event_id"]```
+- 使用列:```["latitude", "longitude", "mag", "time"]```
 
-- ["datetime"]は```datetime```型である。時間はUTCに基準したもの。
+- ["time"]は```datetime```型である。時間はUTCに基準したもの。
 ---
 
 2. 正規化後データ(Step2):
@@ -1772,7 +1772,7 @@ Step2で正規化済みデータ(E_norm)から、震央付近にある地震先�
     - パース：```"E:\tables\step3_orbit_map.csv"```
 
     - ヘッダ:
-    - ["eq_id","eq_time","eq_lat","eq_lon",
+    - ["eq_time","eq_lat","eq_lon",
  "orbit_file","orbit_start_time","orbit_end_time",
  "pass_time_start","pass_time_end",
  "closest_dis_km"]

@@ -31,10 +31,6 @@ def _log_warn(logger, msg: str) -> None:
         logger.warning(msg)
 
 
-def _parse_datetime_utc(series: pd.Series) -> pd.Series:
-    return pd.to_datetime(series, utc=True, errors="raise", format="mixed")
-
-
 def _parse_datetime_str(dt_str: str) -> pd.Timestamp:
     return pd.to_datetime(dt_str, errors="raise", utc=True)
 
@@ -179,13 +175,12 @@ def run_step3_orbit_mapping_new(
     _log_info(logger, f"Read earthquake catalog: {eq_catalog_path}")
     eq_df = pd.read_csv(eq_catalog_path)
 
-    required_eq_cols = ["latitude", "longitude", "magnitude", "datetime", "event_id"]
+    required_eq_cols = ["latitude", "longitude", "mag", "time"]
     missing_cols = [c for c in required_eq_cols if c not in eq_df.columns]
     if missing_cols:
         raise ValueError(f"eq_catalog missing columns: {missing_cols}")
 
     eq_df = eq_df[required_eq_cols].copy()
-    eq_df["datetime"] = _parse_datetime_utc(eq_df["datetime"])
 
     if orbit_index_path.exists():
         _log_info(logger, f"Load orbit index: {orbit_index_path}")
@@ -193,9 +188,6 @@ def run_step3_orbit_mapping_new(
     else:
         _log_info(logger, f"Build orbit index from Step2 outputs: {step2_dir}")
         orbit_index = build_orbit_index(step2_dir=step2_dir, out_csv=orbit_index_path, logger=logger)
-
-    orbit_index["orbit_start_time"] = _parse_datetime_utc(orbit_index["orbit_start_time"])
-    orbit_index["orbit_end_time"] = _parse_datetime_utc(orbit_index["orbit_end_time"])
 
     lead_td = timedelta(hours=cfg.lead_hours)
     out_rows: List[dict] = []
@@ -215,8 +207,7 @@ def run_step3_orbit_mapping_new(
             )
 
     for i, (_, eq) in enumerate(eq_df.iterrows(), start=1):
-        eq_id = eq["event_id"]
-        eq_time = eq["datetime"]
+        eq_time = eq["time"]
         eq_lat = float(eq["latitude"])
         eq_lon = float(eq["longitude"])
 
@@ -255,12 +246,6 @@ def run_step3_orbit_mapping_new(
                 _log_warn(logger, f"Failed reading {orbit_file}: {e}")
                 continue
 
-            try:
-                df["datetime"] = _parse_datetime_utc(df["datetime"])
-            except Exception as e:
-                _log_warn(logger, f"{orbit_file}: datetime parse failed: {e}")
-                continue
-
             df = df[(df["datetime"] >= window_start) & (df["datetime"] <= window_end)].copy()
             if df.empty:
                 continue
@@ -290,7 +275,6 @@ def run_step3_orbit_mapping_new(
             if closest_in_seg < best_closest:
                 best_closest = closest_in_seg
                 best_row = {
-                    "eq_id": eq_id,
                     "eq_time": eq_time.isoformat(),
                     "eq_lat": eq_lat,
                     "eq_lon": eq_lon,
@@ -312,7 +296,6 @@ def run_step3_orbit_mapping_new(
 
     out_df = pd.DataFrame(out_rows)
     columns = [
-        "eq_id",
         "eq_time",
         "eq_lat",
         "eq_lon",

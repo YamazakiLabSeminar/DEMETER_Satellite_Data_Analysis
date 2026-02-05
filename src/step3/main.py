@@ -16,7 +16,7 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument(
         "--eq_catalog",
         type=str,
-        default="eq_catalog/all_eq_declustring_30day_30km.csv",
+        default="earthquake_catalog\eq_m4.8above_depth40kmbelow_2004-2010_declustred.csv",
         help="Earthquake catalog path relative to EXTERNAL_DIR, or absolute path.",
     )
     p.add_argument(
@@ -60,7 +60,7 @@ def main() -> None:
 
     # ===== 3) 入力パスを決める =====
     # 地震カタログ： EXTERNAL_DIR を基準に解釈
-    eq_catalog_path = resolve_path(args.eq_catalog, EXTERNAL_DIR)
+    eq_catalog_path = resolve_path(args.eq_catalog, INTERIM_DIR)
 
     # Step2出力： INTERIM_DIR を基準に解釈
     step2_dir = resolve_path(args.step2_dir, INTERIM_DIR)
