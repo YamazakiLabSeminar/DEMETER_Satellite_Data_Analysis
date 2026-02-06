@@ -13,6 +13,7 @@ import pandas as pd
 class Step3MappingConfig:
     lead_hours: float = 4.0
     max_dist_km: float = 330.0
+    mlat_abs_limit: float = 65.0
     orbit_index_name: str = "step3_orbit_index.csv"
     orbit_map_name: str = "step3_orbit_map.csv"
 
@@ -29,6 +30,13 @@ def _log_warn(logger, msg: str) -> None:
         print(f"[WARN] {msg}")
     else:
         logger.warning(msg)
+
+
+def _to_datetime_naive(series: pd.Series) -> pd.Series:
+    dt = pd.to_datetime(series, errors="raise", format="mixed")
+    if getattr(dt.dt, "tz", None) is not None:
+        dt = dt.dt.tz_localize(None)
+    return dt
 
 
 def _parse_datetime_str(dt_str: str) -> pd.Timestamp:
@@ -184,9 +192,7 @@ def run_step3_orbit_mapping_new(
         raise ValueError(f"eq_catalog missing columns: {missing_cols}")
 
     eq_df = eq_df[required_eq_cols].copy()
-    eq_df["time"] = pd.to_datetime(eq_df["time"], errors="raise", format="mixed")
-    if getattr(eq_df["time"].dt, "tz", None) is not None:
-        eq_df["time"] = eq_df["time"].dt.tz_localize(None)
+    eq_df["time"] = _to_datetime_naive(eq_df["time"])
 
     if orbit_index_path.exists():
         _log_info(logger, f"Load orbit index: {orbit_index_path}")
@@ -195,21 +201,14 @@ def run_step3_orbit_mapping_new(
         _log_info(logger, f"Build orbit index from Step2 outputs: {step2_dir}")
         orbit_index = build_orbit_index(step2_dir=step2_dir, out_csv=orbit_index_path, logger=logger)
 
-    orbit_index["orbit_start_time"] = pd.to_datetime(
-        orbit_index["orbit_start_time"], errors="raise", format="mixed"
-    )
-    orbit_index["orbit_end_time"] = pd.to_datetime(
-        orbit_index["orbit_end_time"], errors="raise", format="mixed"
-    )
-    if getattr(orbit_index["orbit_start_time"].dt, "tz", None) is not None:
-        orbit_index["orbit_start_time"] = orbit_index["orbit_start_time"].dt.tz_localize(None)
-    if getattr(orbit_index["orbit_end_time"].dt, "tz", None) is not None:
-        orbit_index["orbit_end_time"] = orbit_index["orbit_end_time"].dt.tz_localize(None)
+    orbit_index["orbit_start_time"] = _to_datetime_naive(orbit_index["orbit_start_time"])
+    orbit_index["orbit_end_time"] = _to_datetime_naive(orbit_index["orbit_end_time"])
 
     lead_td = timedelta(hours=cfg.lead_hours)
     out_rows: List[dict] = []
     n_no_match = 0
     n_multi_candidates = 0
+    n_excluded_by_mlat = 0
 
     total_eq = len(eq_df)
     progress_every_eq = max(1, total_eq // 20)
@@ -220,7 +219,8 @@ def run_step3_orbit_mapping_new(
             _log_info(
                 logger,
                 f"[MAP] {i}/{total_eq} ({pct:.1f}%) linked={len(out_rows)} "
-                f"no_link={n_no_match} multi_cand={n_multi_candidates}",
+                f"no_link={n_no_match} excluded_mlat={n_excluded_by_mlat} "
+                f"multi_cand={n_multi_candidates}",
             )
 
     for i, (_, eq) in enumerate(eq_df.iterrows(), start=1):
@@ -231,6 +231,7 @@ def run_step3_orbit_mapping_new(
         window_start = eq_time - lead_td
         window_end = eq_time
 
+        # [orbit_end] > [eq_time] かつ [orbit_start] < [eq_time-4h]
         cand = orbit_index[
             (orbit_index["orbit_end_time"] > window_end)
             & (orbit_index["orbit_start_time"] < window_start)
@@ -246,6 +247,7 @@ def run_step3_orbit_mapping_new(
 
         best_row: Optional[dict] = None
         best_closest = np.inf
+        excluded_by_mlat = False
 
         for _, ob in cand.iterrows():
             orbit_file = ob["orbit_file"]
@@ -264,9 +266,7 @@ def run_step3_orbit_mapping_new(
                 continue
 
             try:
-                df["datetime"] = pd.to_datetime(df["datetime"], errors="raise", format="mixed")
-                if getattr(df["datetime"].dt, "tz", None) is not None:
-                    df["datetime"] = df["datetime"].dt.tz_localize(None)
+                df["datetime"] = _to_datetime_naive(df["datetime"])
             except Exception as e:
                 _log_warn(logger, f"{orbit_file}: datetime parse failed: {e}")
                 continue
@@ -293,6 +293,10 @@ def run_step3_orbit_mapping_new(
             idx_min = idx_true[np.argmin(dist_km[idx_true])]
             seg_start, seg_end = find_segment_around_min(mask, idx_min)
 
+            if np.any(np.abs(mlat_arr[seg_start : seg_end + 1]) > cfg.mlat_abs_limit):
+                excluded_by_mlat = True
+                break
+
             pass_time_start = pd.Timestamp(dt_arr[seg_start]).isoformat()
             pass_time_end = pd.Timestamp(dt_arr[seg_end]).isoformat()
             closest_in_seg = float(np.min(dist_km[seg_start : seg_end + 1]))
@@ -310,6 +314,11 @@ def run_step3_orbit_mapping_new(
                     "pass_time_end": pass_time_end,
                     "closest_dis_km": closest_in_seg,
                 }
+
+        if excluded_by_mlat:
+            n_excluded_by_mlat += 1
+            report_progress(i)
+            continue
 
         if best_row is None:
             n_no_match += 1
@@ -340,8 +349,8 @@ def run_step3_orbit_mapping_new(
     _log_info(logger, f"Saved orbit index: {orbit_index_path}")
     _log_info(logger, f"Saved orbit map: {orbit_map_path} (rows={len(out_df)})")
     _log_info(logger, f"No-link events count: {n_no_match}")
+    _log_info(logger, f"Excluded by |mlat|>{cfg.mlat_abs_limit}: {n_excluded_by_mlat}")
     _log_info(logger, f"Events with multiple time-overlap candidates: {n_multi_candidates}")
 
 
-# 既存呼び出し名との互換
 run_step3_orbit_mapping = run_step3_orbit_mapping_new
