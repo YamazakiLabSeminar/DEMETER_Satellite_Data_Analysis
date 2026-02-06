@@ -43,7 +43,7 @@ def match_orbit_to_eq_time(
     if missing_orbit:
         raise ValueError(f"orbit_index CSV missing columns: {missing_orbit}")
 
-    required_eq = ["eq_id", "4hour_before", "datetime"]
+    required_eq = ["eq_id", "4hour_before", "datetime", "lat", "lon"]
     missing_eq = [c for c in required_eq if c not in eq_df.columns]
     if missing_eq:
         raise ValueError(f"earthquake CSV missing columns: {missing_eq}")
@@ -59,8 +59,10 @@ def match_orbit_to_eq_time(
 
     orbit_df["in_eq_window"] = False
     orbit_df["eq_id"] = pd.NA
+    orbit_df["eq_lat"] = pd.NA
+    orbit_df["eq_lon"] = pd.NA
 
-    eq_df = eq_df.dropna(subset=["4hour_before", "datetime", "eq_id"]).copy()
+    eq_df = eq_df.dropna(subset=["4hour_before", "datetime", "eq_id", "lat", "lon"]).copy()
     eq_df = eq_df.sort_values("datetime").reset_index(drop=True)
 
     for i, row in orbit_df.iterrows():
@@ -76,6 +78,8 @@ def match_orbit_to_eq_time(
         matched = eq_df.loc[mask].iloc[0]
         orbit_df.at[i, "in_eq_window"] = True
         orbit_df.at[i, "eq_id"] = matched["eq_id"]
+        orbit_df.at[i, "eq_lat"] = matched["lat"]
+        orbit_df.at[i, "eq_lon"] = matched["lon"]
 
     if out_csv is None:
         out_csv = orbit_index_csv
