@@ -53,13 +53,14 @@ def match_orbit_distance(
     orbit_index_csv: Path,
     candidate_dir: Path,
     out_dir: Optional[Path] = None,
+    out_matched_csv: Optional[Path] = None,
 ) -> pd.DataFrame:
     """
     step3_orbit_index.csv から in_eq_window == TRUE の行を抽出し、
     各 orbit_file を step3_candidate から読み取って距離計算を行う。
     最小距離を min_dis として df_orbit_index に追加し、
     距離<=330km のサンプルを step3_pre_match に保存する。
-    最後に orbit_index CSV を更新する。
+    最後に TRUE 行のみの DataFrame を orbit_index_matched.csv に保存する。
     """
     if not orbit_index_csv.exists():
         raise FileNotFoundError(f"orbit_index CSV not found: {orbit_index_csv}")
@@ -80,6 +81,7 @@ def match_orbit_distance(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     df_all["min_dis"] = pd.NA
+    df_orbit_index["min_dis"] = pd.NA
 
     for idx, row in df_orbit_index.iterrows():
         orbit_file = str(row["orbit_file"])
@@ -118,6 +120,10 @@ def match_orbit_distance(
             min_dis = math.nan
 
         df_all.at[idx, "min_dis"] = min_dis
+        df_orbit_index.at[idx, "min_dis"] = min_dis
 
-    df_all.to_csv(orbit_index_csv, index=False, encoding="utf-8")
+    if out_matched_csv is None:
+        out_matched_csv = orbit_index_csv.parent / "orbit_index_matched.csv"
+    out_matched_csv.parent.mkdir(parents=True, exist_ok=True)
+    df_orbit_index.to_csv(out_matched_csv, index=False, encoding="utf-8")
     return df_orbit_index

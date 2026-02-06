@@ -16,5 +16,6 @@ from orbit_eq_matchi_distance import match_orbit_distance
 
 match_orbit_distance(
     orbit_index_csv= Path(r"E:\tables\step3_orbit_index.csv"),
-    candidate_dir= Path(r"E:\interim\step3_candidate")
+    candidate_dir= Path(r"E:\interim\step3_candidate"),
+    out_matched_csv= Path(r"E:\tables\orbit_index_matched.csv"),
 )
