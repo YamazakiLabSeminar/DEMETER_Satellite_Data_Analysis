@@ -1727,9 +1727,12 @@ Step2で正規化済みデータ(E_norm)から、震央付近にある地震先�
     - ["time","latitude","longitude","depth","mag",]
 
 - 抽出したデータについて、ヘッダ名を変更し、インデックス列"eq_id"列を追加する。
-    - 新しヘッダ["eq_id","datetime","lat","lon","depth","mag",]
+    - 新しヘッダ["eq_id","datetime","lat","lon","depth","mag"]
 
 - 新しいcsvファイルとして出力する。
+
+- 新しく出力されたcsvファイルを読み込み、地震発生から4時間前の時刻を計算して、新しい列として追加する。
+    - ヘッダ["eq_id","4hour_before","datetime","lat","lon","depth","mag"]
 
 ### 3. 地震軌道の抽出
 #### 内容：

@@ -37,7 +37,9 @@ def standardize_eq_catalog(
     out = out.dropna(subset=["datetime", "lat", "lon", "depth", "mag"]).copy()
     out = out.sort_values("datetime").reset_index(drop=True)
     out.insert(0, "eq_id", np.arange(1, len(out) + 1, dtype=int))
+    out.insert(1, "4hour_before", out["datetime"] - pd.Timedelta(hours=4))
 
     out_csv.parent.mkdir(parents=True, exist_ok=True)
+    out = out[["eq_id", "4hour_before", "datetime", "lat", "lon", "depth", "mag"]]
     out.to_csv(out_csv, index=False, encoding="utf-8")
     return out
