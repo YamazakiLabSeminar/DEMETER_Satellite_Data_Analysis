@@ -1,7 +1,7 @@
 from pathlib import Path
-from orbit_eq_matchi_time import match_orbit_to_eq_time
+from candidate_orbit import extract_candidate_orbits
 
-match_orbit_to_eq_time(
+extract_candidate_orbits(
     orbit_index_csv= Path(r"E:\tables\step3_orbit_index.csv"),
-    eq_csv= Path(r"E:\interim\earthquake_catalog\eq_m4.8above_depth40kmbelow_2004-2010_declustred_standardized.csv")
+    step2_dir= Path(r"E:\interim\step2_normalized")
 )
