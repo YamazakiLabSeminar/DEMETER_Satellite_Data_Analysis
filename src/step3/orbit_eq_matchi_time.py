@@ -12,6 +12,13 @@ import pandas as pd
 # - 元のorbit_indexファイルを今のデータフレームで更新する。
 #========================================================
 
+def _to_naive_datetime(series: pd.Series) -> pd.Series:
+    s = pd.to_datetime(series, errors="coerce", format="mixed")
+    if getattr(s.dt, "tz", None) is not None:
+        s = s.dt.tz_convert(None)
+    return s
+
+
 def match_orbit_to_eq_time(
     orbit_index_csv: Path,
     eq_csv: Path,
@@ -44,15 +51,11 @@ def match_orbit_to_eq_time(
     orbit_df = orbit_df.copy()
     eq_df = eq_df.copy()
 
-    orbit_df["orbit_start_time"] = pd.to_datetime(
-        orbit_df["orbit_start_time"], errors="coerce", format="mixed"
-    )
-    orbit_df["orbit_end_time"] = pd.to_datetime(
-        orbit_df["orbit_end_time"], errors="coerce", format="mixed"
-    )
+    orbit_df["orbit_start_time"] = _to_naive_datetime(orbit_df["orbit_start_time"])
+    orbit_df["orbit_end_time"] = _to_naive_datetime(orbit_df["orbit_end_time"])
 
-    eq_df["4hour_before"] = pd.to_datetime(eq_df["4hour_before"], errors="coerce", format="mixed")
-    eq_df["datetime"] = pd.to_datetime(eq_df["datetime"], errors="coerce", format="mixed")
+    eq_df["4hour_before"] = _to_naive_datetime(eq_df["4hour_before"])
+    eq_df["datetime"] = _to_naive_datetime(eq_df["datetime"])
 
     orbit_df["in_eq_window"] = False
     orbit_df["eq_id"] = pd.NA
