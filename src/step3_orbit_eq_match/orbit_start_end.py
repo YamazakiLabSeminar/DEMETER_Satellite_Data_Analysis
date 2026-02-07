@@ -80,7 +80,7 @@ allfile_names = sorted(allfile_names)
 #4-1.  Preparing a list which will contain orbit number(file names), starting time and ending time
 #      of each file.
 length_allfile_names = len(allfile_names)
-data = [[] for i in range(length_allfile_names)]
+data = []
 #
 #
 #[5.  Extracing orbit number(file name), starting and ending time.]
@@ -90,7 +90,7 @@ for f in range(length_allfile_names):
     df = pd.read_csv(allfile_names[f])
 #5-2.  Extracting starting and ending time.
     start_t = pd.to_datetime(df["datetime"].iloc[0])
-    end_t   = pd.to_datetime(df["datetime"].iloc[len(df)-1])
+    end_t   = pd.to_datetime(df["datetime"].iloc[-1])
 #
 #5-3.  Converting starting and ending time in string format into integer format.
     start_t = int(start_t.strftime("%Y%m%d%H%M%S"))
@@ -98,17 +98,14 @@ for f in range(length_allfile_names):
 #
 #5-4.  Inserting orbit number(file name), starting and ending name into the list object whichi is
 #      prepared in 4.
-    data = (allfile_names[f], start_t, end_t)
+    data.append((allfile_names[f].name, start_t, end_t))
 #
 #
 #[6.  Exporting data in a csv format file]
 #6-1.  Converting a list object into a dataframe object.
-data = pd.DataFrame(data)
+data = pd.DataFrame(data, columns=["orbit_file", "start_time", "end_time"])
 #
-#6-2.  Defining the names of items(columns).
-data.columns["orbit_file", "start_time", "end_time"]
-#
-#6-3.  Exporting the dataframe object into a csv file.
-data.to_csv(r"E:\tables\orbit_start_end.csv")
+#6-2.  Exporting the dataframe object into a csv file.
+data.to_csv(r"E:\tables\orbit_start_end.csv", index=False)
 #
 #
