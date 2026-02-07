@@ -13,6 +13,7 @@
 #[1.  Importing modules]
 #1-1.  Importing pandas, and pathlib modules.
 import pandas as pd
+from tqdm.auto import tqdm
 from pathlib import Path
 #
 #
@@ -45,7 +46,7 @@ list1 = []
 #
 #
 #[5.  Searching orbit which meet time requirement]
-for i in range(length_eqdata):
+for i in tqdm(range(length_eqdata), desc="EQ", unit="eq"):
 #5-1.  Setting time four hour before the earthquake occurred.
     beforeq = pd.to_datetime(eq_data["4hour_before"].iloc[i])
     starteq = pd.to_datetime(eq_data["datetime"].iloc[i])
@@ -65,18 +66,15 @@ for i in range(length_eqdata):
         if starteq < s1:
             break
         elif beforeq <= s1 <= starteq:
-            list1.append(searchdata.iloc[j,0])
+            list1.append([searchdata.iloc[j, 0]] + eq_data.iloc[i, 0:7].tolist())
         elif beforeq <= e1 <= starteq:
-            list1.append(searchdata.iloc[j,0])
+            list1.append([searchdata.iloc[j, 0]] + eq_data.iloc[i, 0:7].tolist())
 #
 #
 #[6.  Exporting data as a csv format file]
 #6-1.  converting a list object into a data frame object.
-data = pd.DataFrame(list1)
-#
-#6-2.  Connecting orbit data and earthquake data.
-outputone = pd.concat([eq_data, data], axis=1)
+data = pd.DataFrame(list1, columns=["orbit_file", "eq_id", "4hour_before", "datetime", "eq_lat", "eq_lon", "depth", "mag"])
 #
 #6-3.  Exporting the data frame into a csv file.
-outputone.to_csv(OUTPUT_DIR / "orbit_meet_time_condition.csv")
+data.to_csv(OUTPUT_DIR / "orbit_meet_time_condition.csv")
 ###################################################################################################
