@@ -1749,10 +1749,11 @@ Step2で正規化済みデータ(E_norm)から、震央付近にある地震先�
 5. ```orbit_eq_matchi_distance.py```を実行し、距離条件(衛星と震央の距離<=330km)に従うサンプルを```step3_candidate```に保存されたファイルから抽出してDataFrameで返し、新規フォルダ```step3_orbit_to_eq_match```に新規csvファイルとして保存する。
     - ```step3_orbit_index.csv```から```in_eq_window == TRUE```の行だけ抽出し、DataFrame```df_orbit_index```で返す。
     - ```df_orbit_index```の["orbit_file"]をキーとし、フォルダ```step3_candidate```内で同じ名のファイルを探す。
-    - 各ファイルの["lat","lon"]と、```df_orbit_index```の["eq_lat","eq_lon"]を用いて、ヒュベニ公式(WGS84)でサンプルごとに距離を計算、数値型(単位はkmに変換)として出力する。
-    - 距離が330km以下(<=330km)のサンプルを抽出し、最小距離を新しい列"min_dis"として、DataFrame```df_orbit_index```に追加する。
+    - 各ファイルの["lat","lon"]と、```df_orbit_index```の["eq_lat","eq_lon"]を用いて、ヒュベニ公式(WGS84)でサンプルごとに距離を計算、数値型(単位はkmに変換)として返す。
+    - 距離が330km以下(<=330km)のサンプルがあると、そのファイル名を新規のDataFrame```df_pre_match_orbit```に追加し、
+    - サンプルを抽出し、最小距離"min_dis"をDataFrame```df_pre_match_orbit```に追加し。
     - 新しいcsvファイルとして新規フォルダ```step3_pre_match```に保存する。
-    - 新しいファイル```step3_orbit_index_matched.csv```をDataFrame```df_orbit_index```で出力する。
+    - DataFrame```df_pre_match_orbit```を新しいファイル```step3_orbit_index_pre_matched.csv```で出力する。
 
 ---
 #### 入力:
