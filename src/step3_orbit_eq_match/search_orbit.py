@@ -32,6 +32,7 @@ print("Directory of output", {OUTPUT_DIR})
 #[3.  Importing the orbit data from orbit_start_end.csv]
 #3-1.  Importing the orbit data from orbit_start_end.csv
 searchdata = pd.read_csv(ORBIT_PATH)
+searchdata = searchdata.sort_values("start_time").reset_index(drop=True)
 #
 #3-2.  Importing the earthquak data from a file
 eq_data = pd.read_csv(EQ_PATH)
@@ -85,5 +86,5 @@ col_names = [f"orbit_meet_time_{i+1}" for i in range(max_cols)]
 data = pd.DataFrame(list1, columns=col_names)
 outputone = pd.concat([eq_data, data], axis=1)
 #6-3.  Exporting the data frame into a csv file.
-outputone.to_csv(OUTPUT_DIR / "orbit_quake_ver2.csv", index=False)
+outputone.to_csv(OUTPUT_DIR / "orbit_quake_ver4.csv", index=False)
 ###################################################################################################

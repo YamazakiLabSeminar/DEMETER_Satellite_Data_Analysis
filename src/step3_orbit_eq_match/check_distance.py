@@ -68,7 +68,7 @@ from tqdm.auto import tqdm
 import math
 
 ORBIT_DATA_DIR  = Path(r"E:\interim\step2_normalized")
-OB_MEET_TIME    = Path(r"E:\tables\orbit_quake_ver2.csv")
+OB_MEET_TIME    = Path(r"E:\tables\orbit_quake_ver4.csv")
 OUTPUT_DIR      = Path(r"E:\tables")
 
 print("orbit data directory =", {ORBIT_DATA_DIR})
@@ -84,67 +84,82 @@ df_obmt = pd.read_csv(OB_MEET_TIME)
 length_omt = len(df_obmt)
 
 df_obmt["eq_lat_rad"] = df_obmt["lat"] * math.pi / 180
-df_obmt["eq_lon_rad"] = df_obmt["lat"] * math.pi / 180
+df_obmt["eq_lon_rad"] = df_obmt["lon"] * math.pi / 180
 
 list1 = [[] for k in range(length_omt)]
+candidate_cols = [c for c in df_obmt.columns if c.startswith("orbit_meet_time_")]
+
+count_dist = 0
+count_time = 0
 
 for i in tqdm(range(length_omt), desc="Searching", unit="eq"):
 
     list2 = []
 
-    for col in [7,8,9]:
+    lat1 = df_obmt["eq_lat_rad"].iloc[i]
+    lon1 = df_obmt["eq_lon_rad"].iloc[i]
+    beforeq = df_obmt["4hour_before"].iloc[i]
+    starteq = df_obmt["datetime"].iloc[i]
 
-        if df_obmt.iloc[i,col] == df_obmt.iloc[i,col]:
+    for col in candidate_cols:
+        if pd.isna(df_obmt.at[i, col]):
+            continue
 
-            orbit_file_name = df_obmt.iloc[i,col]
-            
-            orbit_data_path = ORBIT_DATA_DIR / orbit_file_name
+        orbit_file_name = df_obmt.at[i, col]
+        orbit_data_path = ORBIT_DATA_DIR / orbit_file_name
 
-            if not orbit_data_path.exists():
-                print(f"Missing orbit data file: {orbit_data_path}")
-                raise SystemExit(1)
+        if not orbit_data_path.exists():
+            print(f"Missing orbit data file: {orbit_data_path}")
+            raise SystemExit(1)
 
-            df_obdata = pd.read_csv(orbit_data_path)
-            df_obdata["lat_rad"] = df_obdata["lat"] * math.pi / 180
-            df_obdata["lon_rad"] = df_obdata["lon"] * math.pi / 180                        
-            df_obdata["datetime"] = df_obdata["datetime"].astype(str).str.slice(0, 19)
-            df_obdata["datetime"] = df_obdata["datetime"].str.replace("-", "").str.replace(":", "").str.replace(" ", "")
-            df_obdata["datetime"] = df_obdata["datetime"].astype("int64")
+        df_obdata = pd.read_csv(orbit_data_path)
+        df_obdata["lat_rad"] = df_obdata["lat"] * math.pi / 180
+        df_obdata["lon_rad"] = df_obdata["lon"] * math.pi / 180
+        df_obdata["datetime"] = df_obdata["datetime"].astype(str).str.slice(0, 19)
+        df_obdata["datetime"] = df_obdata["datetime"].str.replace("-", "").str.replace(":", "").str.replace(" ", "")
+        df_obdata["datetime"] = df_obdata["datetime"].astype("int64")
 
-            lat1 = df_obmt["eq_lat_rad"].iloc[i]
-            lon1 = df_obmt["eq_lon_rad"].iloc[i]
-            beforeq = df_obmt["4hour_before"].iloc[i]
-            starteq = df_obmt["datetime"].iloc[i]
+        for j in range(len(df_obdata)):
+            lat2 = df_obdata["lat_rad"].iloc[j]
+            lon2 = df_obdata["lon_rad"].iloc[j]
+            # lon2: 0~360 → -180~180 に変換
+            if lon2 > math.pi:
+                lon2 -= 2 * math.pi
 
-            for j in range(len(df_obdata)):
-                lat2 = df_obdata["lat_rad"].iloc[j]
-                lon2 = df_obdata["lon_rad"].iloc[j]
+            dif_lat = lat2 - lat1
+            dif_lon = lon2 - lon1
 
-                if lon2 > math.pi:
-                    lat2 = lat2 - 2*math.pi
-                
-                dif_lat = lat2 - lat1
-                dif_lon = lon2 - lon1
-                                    
-                P = (lat1+lat2) / 2                                         # 両点緯度の平均値
-                W = math.sqrt((1-e*e * math.sin(P) * math.sin(P)))
-                M = (a*(1 - e*e)) / (W * W * W)
-                N = a / W
+            P = (lat1 + lat2) / 2                                     # ????????
+            W = math.sqrt((1 - e * e * math.sin(P) * math.sin(P)))
+            M = (a * (1 - e * e)) / (W * W * W)
+            N = a / W
 
-                dist = math.sqrt(dif_lat*dif_lat*M*M + dif_lon*dif_lon*N*N*math.cos(P)*math.cos(P))
-                dist = dist / 1000                                          # 単位[m] => [km]
+            dist = math.sqrt(dif_lat * dif_lat * M * M + dif_lon * dif_lon * N * N * math.cos(P) * math.cos(P))
+            dist = dist / 1000                                        # ??[m] => [km]
 
-                if dist < 330:
-                    s1 = df_obdata["datetime"].iloc[j]
-                    if beforeq <= s1 <= starteq:
-                        list2.append(orbit_file_name)
-                        break
-              
-        list1[i] = [list2[0]] if list2 else [pd.NaT]
+            if dist < 330:
+                count_dist += 1
+                s1 = df_obdata["datetime"].iloc[j]
+                if beforeq <= s1 <= starteq:
+                    count_time += 1
+                    list2.append(orbit_file_name)
+                    break
 
-#max_cols = max((len(row) for row in list1), default=0)
-#col_names = [f"orbit_eq_match_{i+1}" for i in range(max_cols)]
-data = pd.DataFrame(list1, columns=["orbit_eq_match"])
+                if not (beforeq <= s1 <= starteq):
+                    print("beforeq", beforeq, "starteq", starteq, "s1", s1)
+                    break
+
+    list1[i] = list2 if list2 else [pd.NaT]
+
+print("dist < 330 count =", count_dist)
+print("time window count =", count_time)
+
+
+max_cols = max((len(row) for row in list1), default=0)
+col_names = [f"orbit_eq_match_{i+1}" for i in range(max_cols)]
+data = pd.DataFrame(list1, columns=col_names)
 output_one = pd.concat([df_obmt,data], axis=1)
-output_one.to_csv(OUTPUT_DIR/"orbit_quake_distance_ver5.csv", index=False)
+output_one.to_csv(OUTPUT_DIR/"orbit_quake_distance_ver11.csv", index=False)
+all_orbits = [x for row in list1 for x in row if pd.notna(x)]
+print("unique_orbits_count =", len(set(all_orbits)))
 #**************************************************************************************************
