@@ -74,7 +74,9 @@ for i in tqdm(range(length_eqdata), desc="EQ", unit="eq"):
 #
 #[6.  Exporting data as a csv format file]
 #6-1.  converting a list object into a data frame object.
-data = pd.DataFrame(list1, columns=["orbit_meet_time_1","orbit_meet_time_2","orbit_meet_time_3"])
+max_cols = max((len(row) for row in list1), default=0)
+col_names = [f"orbit_meet_time_{i+1}" for i in range(max_cols)]
+data = pd.DataFrame(list1, columns=col_names)
 outputone = pd.concat([eq_data, data], axis=1)
 #6-3.  Exporting the data frame into a csv file.
 outputone.to_csv(OUTPUT_DIR / "orbit_quake_ver1.csv", index=False)
