@@ -105,11 +105,13 @@ for i in tqdm(range(length_omt), desc="Searching", unit="eq"):
         df_obdata = pd.read_csv(orbit_data_path)
         df_obdata["lat_rad"] = df_obdata["lat"] * math.pi / 180
         df_obdata["lon_rad"] = df_obdata["lon"] * math.pi / 180
+        df_obdata["datetime"] = df_obdata["datetime"].astype(str).str.slice(0, 19)
+        df_obdata["datetime"] = df_obdata["datetime"].str.replace("-", "").str.replace(":", "").str.replace(" ", "")
 
         lat1 = df_obmt["eq_lat_rad"].iloc[i]
         lon1 = df_obmt["eq_lon_rad"].iloc[i]
-        beforeq = df_obmt["4hour_before"].iloc[i]
-        starteq = df_obmt["datetime"].iloc[i]
+        beforeq = int(df_obmt["4hour_before"].iloc[i])
+        starteq = int(df_obmt["datetime"].iloc[i])
 
             
 
@@ -133,7 +135,7 @@ for i in tqdm(range(length_omt), desc="Searching", unit="eq"):
             dist = dist / 1000                                          # 単位[m] => [km]
 
             if dist < 330:
-                s1 = df_obdata["datetime"].iloc[j]
+                s1 = int(df_obdata["datetime"].iloc[j])
                 if beforeq <= s1 <= starteq:
                     list2.append(orbit_file_name)
                     break
@@ -141,7 +143,9 @@ for i in tqdm(range(length_omt), desc="Searching", unit="eq"):
         list1[i] = list2
 
     if df_obmt.iloc[i,8] == df_obmt.iloc[i,8]:
+
         orbit_file_name = df_obmt.iloc[i,8]
+        
         orbit_data_path = ORBIT_DATA_DIR / orbit_file_name
 
         if not orbit_data_path.exists():
@@ -151,11 +155,13 @@ for i in tqdm(range(length_omt), desc="Searching", unit="eq"):
         df_obdata = pd.read_csv(orbit_data_path)
         df_obdata["lat_rad"] = df_obdata["lat"] * math.pi / 180
         df_obdata["lon_rad"] = df_obdata["lon"] * math.pi / 180
+        df_obdata["datetime"] = df_obdata["datetime"].astype(str).str.slice(0, 19)
+        df_obdata["datetime"] = df_obdata["datetime"].str.replace("-", "").str.replace(":", "").str.replace(" ", "")
 
         lat1 = df_obmt["eq_lat_rad"].iloc[i]
         lon1 = df_obmt["eq_lon_rad"].iloc[i]
-        beforeq = df_obmt["4hour_before"].iloc[i]
-        starteq = df_obmt["datetime"].iloc[i]
+        beforeq = int(df_obmt["4hour_before"].iloc[i])
+        starteq = int(df_obmt["datetime"].iloc[i])
 
             
 
@@ -179,7 +185,7 @@ for i in tqdm(range(length_omt), desc="Searching", unit="eq"):
             dist = dist / 1000                                          # 単位[m] => [km]
 
             if dist < 330:
-                s1 = df_obdata["datetime"].iloc[j]
+                s1 = int(df_obdata["datetime"].iloc[j])
                 if beforeq <= s1 <= starteq:
                     list2.append(orbit_file_name)
                     break
@@ -187,7 +193,9 @@ for i in tqdm(range(length_omt), desc="Searching", unit="eq"):
         list1[i] = list2
        
     if df_obmt.iloc[i,9] == df_obmt.iloc[i,9]:
+
         orbit_file_name = df_obmt.iloc[i,9]
+        
         orbit_data_path = ORBIT_DATA_DIR / orbit_file_name
 
         if not orbit_data_path.exists():
@@ -197,11 +205,13 @@ for i in tqdm(range(length_omt), desc="Searching", unit="eq"):
         df_obdata = pd.read_csv(orbit_data_path)
         df_obdata["lat_rad"] = df_obdata["lat"] * math.pi / 180
         df_obdata["lon_rad"] = df_obdata["lon"] * math.pi / 180
+        df_obdata["datetime"] = df_obdata["datetime"].astype(str).str.slice(0, 19)
+        df_obdata["datetime"] = df_obdata["datetime"].str.replace("-", "").str.replace(":", "").str.replace(" ", "")
 
         lat1 = df_obmt["eq_lat_rad"].iloc[i]
         lon1 = df_obmt["eq_lon_rad"].iloc[i]
-        beforeq = df_obmt["4hour_before"].iloc[i]
-        starteq = df_obmt["datetime"].iloc[i]
+        beforeq = int(df_obmt["4hour_before"].iloc[i])
+        starteq = int(df_obmt["datetime"].iloc[i])
 
             
 
@@ -225,7 +235,7 @@ for i in tqdm(range(length_omt), desc="Searching", unit="eq"):
             dist = dist / 1000                                          # 単位[m] => [km]
 
             if dist < 330:
-                s1 = df_obdata["datetime"].iloc[j]
+                s1 = int(df_obdata["datetime"].iloc[j])
                 if beforeq <= s1 <= starteq:
                     list2.append(orbit_file_name)
                     break
