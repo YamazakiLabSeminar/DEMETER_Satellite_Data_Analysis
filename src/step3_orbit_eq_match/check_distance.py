@@ -145,8 +145,9 @@ for i in tqdm(range(length_omt), desc="Searching", unit="eq"):
               
     list1[i] = list2
 
-
-data = pd.DataFrame(list1, columns=["orbit_meet_time_dist"])
+max_cols = max((len(row) for row in list1), default=0)
+col_names = [f"orbit_eq_match_{i+1}" for i in range(max_cols)]
+data = pd.DataFrame(list1, columns=col_names)
 output_one = pd.concat([df_obmt,data], axis=1)
 output_one.to_csv(OUTPUT_DIR/"orbit_quake_distance_ver2.csv", index=False)
 #**************************************************************************************************
