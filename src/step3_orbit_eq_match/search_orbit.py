@@ -35,8 +35,11 @@ searchdata = pd.read_csv(ORBIT_PATH)
 #
 #3-2.  Importing the earthquak data from a file
 eq_data = pd.read_csv(EQ_PATH)
-eq_data["4hour_before"] = pd.to_datetime(eq_data["4hour_before"]).dt.strftime("%Y%m%d%H%M%S").astype(int)
-eq_data["datetime"]     = pd.to_datetime(eq_data["datetime"]).dt.strftime("%Y%m%d%H%M%S").astype(int)
+eq_data["4hour_before"] = eq_data["4hour_before"].astype(str).str.slice(0, 19)
+eq_data["4hour_before"] = eq_data["4hour_before"].str.replace("-", "").str.replace(":", "").str.replace(" ", "")
+
+eq_data["datetime"] = eq_data["datetime"].astype(str).str.slice(0, 19)
+eq_data["datetime"] = eq_data["datetime"].str.replace("-", "").str.replace(":", "").str.replace(" ", "")
 
 #
 #[4.  Preparation of searching]
@@ -49,8 +52,8 @@ list1 = [[] for k in range(length_eqdata)]
 #
 #[5.  Searching orbit which meet time requirement]
 for i in tqdm(range(length_eqdata), desc="EQ", unit="eq"):
-    beforeq = eq_data["4hour_before"].iloc[i]
-    starteq = eq_data["datetime"].iloc[i]
+    beforeq = int(eq_data.iloc[i,1])
+    starteq = int(eq_data.iloc[i,2])
 
     list2 = []
 
