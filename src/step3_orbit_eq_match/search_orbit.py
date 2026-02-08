@@ -37,9 +37,12 @@ searchdata = pd.read_csv(ORBIT_PATH)
 eq_data = pd.read_csv(EQ_PATH)
 eq_data["4hour_before"] = eq_data["4hour_before"].astype(str).str.slice(0, 19)
 eq_data["4hour_before"] = eq_data["4hour_before"].str.replace("-", "").str.replace(":", "").str.replace(" ", "")
+eq_data["4hour_before"] = eq_data["4hour_before"].astype("int64")
 
 eq_data["datetime"] = eq_data["datetime"].astype(str).str.slice(0, 19)
 eq_data["datetime"] = eq_data["datetime"].str.replace("-", "").str.replace(":", "").str.replace(" ", "")
+eq_data["datetime"] = eq_data["datetime"].astype("int64")
+
 
 #
 #[4.  Preparation of searching]
@@ -52,8 +55,8 @@ list1 = [[] for k in range(length_eqdata)]
 #
 #[5.  Searching orbit which meet time requirement]
 for i in tqdm(range(length_eqdata), desc="EQ", unit="eq"):
-    beforeq = int(eq_data.iloc[i,1])
-    starteq = int(eq_data.iloc[i,2])
+    beforeq = eq_data.iloc[i,1]
+    starteq = eq_data.iloc[i,2]
 
     list2 = []
 
@@ -82,5 +85,5 @@ col_names = [f"orbit_meet_time_{i+1}" for i in range(max_cols)]
 data = pd.DataFrame(list1, columns=col_names)
 outputone = pd.concat([eq_data, data], axis=1)
 #6-3.  Exporting the data frame into a csv file.
-outputone.to_csv(OUTPUT_DIR / "orbit_quake_ver1.csv", index=False)
+outputone.to_csv(OUTPUT_DIR / "orbit_quake_ver2.csv", index=False)
 ###################################################################################################

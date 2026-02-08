@@ -68,7 +68,7 @@ from tqdm.auto import tqdm
 import math
 
 ORBIT_DATA_DIR  = Path(r"E:\interim\step2_normalized")
-OB_MEET_TIME    = Path(r"E:\tables\orbit_quake_ver1.csv")
+OB_MEET_TIME    = Path(r"E:\tables\orbit_quake_ver2.csv")
 OUTPUT_DIR      = Path(r"E:\tables")
 
 print("orbit data directory =", {ORBIT_DATA_DIR})
@@ -106,29 +106,26 @@ for i in tqdm(range(length_omt), desc="Searching", unit="eq"):
 
             df_obdata = pd.read_csv(orbit_data_path)
             df_obdata["lat_rad"] = df_obdata["lat"] * math.pi / 180
-            df_obdata["lon_rad"] = df_obdata["lon"] * math.pi / 180
+            df_obdata["lon_rad"] = df_obdata["lon"] * math.pi / 180                        
             df_obdata["datetime"] = df_obdata["datetime"].astype(str).str.slice(0, 19)
             df_obdata["datetime"] = df_obdata["datetime"].str.replace("-", "").str.replace(":", "").str.replace(" ", "")
-            df_obdata["datetime"] = df_obdata["datetime"].astype(int)
+            df_obdata["datetime"] = df_obdata["datetime"].astype("int64")
 
             lat1 = df_obmt["eq_lat_rad"].iloc[i]
             lon1 = df_obmt["eq_lon_rad"].iloc[i]
-            beforeq = int(df_obmt["4hour_before"].iloc[i])
-            starteq = int(df_obmt["datetime"].iloc[i])
-
-                
+            beforeq = df_obmt["4hour_before"].iloc[i]
+            starteq = df_obmt["datetime"].iloc[i]
 
             for j in range(len(df_obdata)):
                 lat2 = df_obdata["lat_rad"].iloc[j]
                 lon2 = df_obdata["lon_rad"].iloc[j]
 
+                if lon2 > math.pi:
+                    lat2 = lat2 - 2*math.pi
+                
                 dif_lat = lat2 - lat1
                 dif_lon = lon2 - lon1
-                if dif_lon > math.pi:
-                    dif_lon -= 2*math.pi
-                elif dif_lon < -math.pi:
-                    dif_lon += 2*math.pi
-                
+                                    
                 P = (lat1+lat2) / 2                                         # 両点緯度の平均値
                 W = math.sqrt((1-e*e * math.sin(P) * math.sin(P)))
                 M = (a*(1 - e*e)) / (W * W * W)
@@ -143,11 +140,11 @@ for i in tqdm(range(length_omt), desc="Searching", unit="eq"):
                         list2.append(orbit_file_name)
                         break
               
-    list1[i] = list2
+        list1[i] = [list2[0]] if list2 else [pd.NaT]
 
-max_cols = max((len(row) for row in list1), default=0)
-col_names = [f"orbit_eq_match_{i+1}" for i in range(max_cols)]
-data = pd.DataFrame(list1, columns=col_names)
+#max_cols = max((len(row) for row in list1), default=0)
+#col_names = [f"orbit_eq_match_{i+1}" for i in range(max_cols)]
+data = pd.DataFrame(list1, columns=["orbit_eq_match"])
 output_one = pd.concat([df_obmt,data], axis=1)
-output_one.to_csv(OUTPUT_DIR/"orbit_quake_distance_ver2.csv", index=False)
+output_one.to_csv(OUTPUT_DIR/"orbit_quake_distance_ver5.csv", index=False)
 #**************************************************************************************************
