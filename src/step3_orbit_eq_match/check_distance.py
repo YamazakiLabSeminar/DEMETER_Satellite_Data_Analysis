@@ -83,8 +83,8 @@ e = math.sqrt((a*a - b*b)/(a*a))                                    # eccentrici
 df_obmt = pd.read_csv(OB_MEET_TIME)
 length_omt = len(df_obmt)
 
-df_obmt["eq_lat_rad"] = df_obmt["eq_lat"] * math.pi / 180
-df_obmt["eq_lon_rad"] = df_obmt["eq_lon"] * math.pi / 180
+df_obmt["eq_lat_rad"] = df_obmt["lat"] * math.pi / 180
+df_obmt["eq_lon_rad"] = df_obmt["lat"] * math.pi / 180
 
 list1 = [[] for k in range(length_omt)]
 
