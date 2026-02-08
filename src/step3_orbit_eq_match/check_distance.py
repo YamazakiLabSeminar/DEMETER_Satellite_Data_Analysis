@@ -68,7 +68,7 @@ from tqdm.auto import tqdm
 import math
 
 ORBIT_DATA_DIR  = Path(r"E:\interim\step2_normalized")
-OB_MEET_TIME    = Path(r"E:\tables\orbit_meet_time_condition.csv")
+OB_MEET_TIME    = Path(r"E:\tables\orbit_quake_ver1.csv")
 OUTPUT_DIR      = Path(r"E:\tables")
 
 print("orbit data directory =", {ORBIT_DATA_DIR})
@@ -83,61 +83,157 @@ e = math.sqrt((a*a - b*b)/(a*a))                                    # eccentrici
 df_obmt = pd.read_csv(OB_MEET_TIME)
 length_omt = len(df_obmt)
 
-df_obmt["4hour_before"] = pd.to_datetime(df_obmt["4hour_before"], format="mixed", utc=True).dt.tz_localize(None)
-df_obmt["datetime"] = pd.to_datetime(df_obmt["datetime"], format="mixed", utc=True).dt.tz_localize(None)
 df_obmt["eq_lat_rad"] = df_obmt["eq_lat"] * math.pi / 180
 df_obmt["eq_lon_rad"] = df_obmt["eq_lon"] * math.pi / 180
 
 list1 = [[] for k in range(length_omt)]
 
 for i in tqdm(range(length_omt), desc="Searching", unit="eq"):
+
     list2 = []
-    orbit_file_name = df_obmt["orbit_file"].iloc[i]
-    
-    orbit_data_path = ORBIT_DATA_DIR / orbit_file_name
 
-    if not orbit_data_path.exists():
-        print(f"Missing orbit data file: {orbit_data_path}")
-        raise SystemExit(1)
+    if df_obmt.iloc[i,7] == df_obmt.iloc[i,7]:
 
-    df_obdata = pd.read_csv(orbit_data_path)
-    df_obdata["lat_rad"] = df_obdata["lat"] * math.pi / 180
-    df_obdata["lon_rad"] = df_obdata["lon"] * math.pi / 180
-    df_obdata["datetime"] = pd.to_datetime(df_obdata["datetime"]).dt.tz_localize(None)
-
-    lat1 = df_obmt["eq_lat_rad"].iloc[i]
-    lon1 = df_obmt["eq_lon_rad"].iloc[i]
-    beforeq = df_obmt["4hour_before"].iloc[i]
-    starteq = df_obmt["datetime"].iloc[i]
-
-    for j in range(len(df_obdata)):
-        lat2 = df_obdata["lat_rad"].iloc[j]
-        lon2 = df_obdata["lon_rad"].iloc[j]
-
-        dif_lat = lat2 - lat1
-        dif_lon = lon2 - lon1
-        if dif_lon > math.pi:
-            dif_lon -= 2*math.pi
-        elif dif_lon < -math.pi:
-            dif_lon += 2*math.pi
+        orbit_file_name = df_obmt.iloc[i,7]
         
-        P = (lat1+lat2) / 2                                         # 両点緯度の平均値
-        W = math.sqrt((1-e*e * math.sin(P) * math.sin(P)))
-        M = (a*(1 - e*e)) / (W * W * W)
-        N = a / W
+        orbit_data_path = ORBIT_DATA_DIR / orbit_file_name
 
-        dist = math.sqrt(dif_lat*dif_lat*M*M + dif_lon*dif_lon*N*N*math.cos(P)*math.cos(P))
-        dist = dist / 1000                                          # 単位[m] => [km]
+        if not orbit_data_path.exists():
+            print(f"Missing orbit data file: {orbit_data_path}")
+            raise SystemExit(1)
 
-        if dist < 330:
-            s1 = df_obdata["datetime"].iloc[j]
-            if beforeq <= s1 <= starteq:
-                list2.append(orbit_file_name)
-                break
-    
-    list1[i] = list2
+        df_obdata = pd.read_csv(orbit_data_path)
+        df_obdata["lat_rad"] = df_obdata["lat"] * math.pi / 180
+        df_obdata["lon_rad"] = df_obdata["lon"] * math.pi / 180
+
+        lat1 = df_obmt["eq_lat_rad"].iloc[i]
+        lon1 = df_obmt["eq_lon_rad"].iloc[i]
+        beforeq = df_obmt["4hour_before"].iloc[i]
+        starteq = df_obmt["datetime"].iloc[i]
+
+            
+
+        for j in range(len(df_obdata)):
+            lat2 = df_obdata["lat_rad"].iloc[j]
+            lon2 = df_obdata["lon_rad"].iloc[j]
+
+            dif_lat = lat2 - lat1
+            dif_lon = lon2 - lon1
+            if dif_lon > math.pi:
+                dif_lon -= 2*math.pi
+            elif dif_lon < -math.pi:
+                dif_lon += 2*math.pi
+            
+            P = (lat1+lat2) / 2                                         # 両点緯度の平均値
+            W = math.sqrt((1-e*e * math.sin(P) * math.sin(P)))
+            M = (a*(1 - e*e)) / (W * W * W)
+            N = a / W
+
+            dist = math.sqrt(dif_lat*dif_lat*M*M + dif_lon*dif_lon*N*N*math.cos(P)*math.cos(P))
+            dist = dist / 1000                                          # 単位[m] => [km]
+
+            if dist < 330:
+                s1 = df_obdata["datetime"].iloc[j]
+                if beforeq <= s1 <= starteq:
+                    list2.append(orbit_file_name)
+                    break
+        
+        list1[i] = list2
+
+    if df_obmt.iloc[i,8] == df_obmt.iloc[i,8]:
+        orbit_file_name = df_obmt.iloc[i,8]
+        orbit_data_path = ORBIT_DATA_DIR / orbit_file_name
+
+        if not orbit_data_path.exists():
+            print(f"Missing orbit data file: {orbit_data_path}")
+            raise SystemExit(1)
+
+        df_obdata = pd.read_csv(orbit_data_path)
+        df_obdata["lat_rad"] = df_obdata["lat"] * math.pi / 180
+        df_obdata["lon_rad"] = df_obdata["lon"] * math.pi / 180
+
+        lat1 = df_obmt["eq_lat_rad"].iloc[i]
+        lon1 = df_obmt["eq_lon_rad"].iloc[i]
+        beforeq = df_obmt["4hour_before"].iloc[i]
+        starteq = df_obmt["datetime"].iloc[i]
+
+            
+
+        for j in range(len(df_obdata)):
+            lat2 = df_obdata["lat_rad"].iloc[j]
+            lon2 = df_obdata["lon_rad"].iloc[j]
+
+            dif_lat = lat2 - lat1
+            dif_lon = lon2 - lon1
+            if dif_lon > math.pi:
+                dif_lon -= 2*math.pi
+            elif dif_lon < -math.pi:
+                dif_lon += 2*math.pi
+            
+            P = (lat1+lat2) / 2                                         # 両点緯度の平均値
+            W = math.sqrt((1-e*e * math.sin(P) * math.sin(P)))
+            M = (a*(1 - e*e)) / (W * W * W)
+            N = a / W
+
+            dist = math.sqrt(dif_lat*dif_lat*M*M + dif_lon*dif_lon*N*N*math.cos(P)*math.cos(P))
+            dist = dist / 1000                                          # 単位[m] => [km]
+
+            if dist < 330:
+                s1 = df_obdata["datetime"].iloc[j]
+                if beforeq <= s1 <= starteq:
+                    list2.append(orbit_file_name)
+                    break
+        
+        list1[i] = list2
+       
+    if df_obmt.iloc[i,9] == df_obmt.iloc[i,9]:
+        orbit_file_name = df_obmt.iloc[i,9]
+        orbit_data_path = ORBIT_DATA_DIR / orbit_file_name
+
+        if not orbit_data_path.exists():
+            print(f"Missing orbit data file: {orbit_data_path}")
+            raise SystemExit(1)
+
+        df_obdata = pd.read_csv(orbit_data_path)
+        df_obdata["lat_rad"] = df_obdata["lat"] * math.pi / 180
+        df_obdata["lon_rad"] = df_obdata["lon"] * math.pi / 180
+
+        lat1 = df_obmt["eq_lat_rad"].iloc[i]
+        lon1 = df_obmt["eq_lon_rad"].iloc[i]
+        beforeq = df_obmt["4hour_before"].iloc[i]
+        starteq = df_obmt["datetime"].iloc[i]
+
+            
+
+        for j in range(len(df_obdata)):
+            lat2 = df_obdata["lat_rad"].iloc[j]
+            lon2 = df_obdata["lon_rad"].iloc[j]
+
+            dif_lat = lat2 - lat1
+            dif_lon = lon2 - lon1
+            if dif_lon > math.pi:
+                dif_lon -= 2*math.pi
+            elif dif_lon < -math.pi:
+                dif_lon += 2*math.pi
+            
+            P = (lat1+lat2) / 2                                         # 両点緯度の平均値
+            W = math.sqrt((1-e*e * math.sin(P) * math.sin(P)))
+            M = (a*(1 - e*e)) / (W * W * W)
+            N = a / W
+
+            dist = math.sqrt(dif_lat*dif_lat*M*M + dif_lon*dif_lon*N*N*math.cos(P)*math.cos(P))
+            dist = dist / 1000                                          # 単位[m] => [km]
+
+            if dist < 330:
+                s1 = df_obdata["datetime"].iloc[j]
+                if beforeq <= s1 <= starteq:
+                    list2.append(orbit_file_name)
+                    break
+        
+        list1[i] = list2
+
 
 data = pd.DataFrame(list1, columns=["orbit_meet_time_dist"])
-output_one = pd.concat([data, df_obmt], axis=1)
-output_one.to_csv(OUTPUT_DIR/"orbit_quake_distance_ver1.csv", index=False)
+output_one = pd.concat([df_obmt,data], axis=1)
+output_one.to_csv(OUTPUT_DIR/"orbit_quake_distance_ver2.csv", index=False)
 #**************************************************************************************************
