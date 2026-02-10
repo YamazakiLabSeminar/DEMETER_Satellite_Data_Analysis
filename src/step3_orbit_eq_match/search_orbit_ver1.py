@@ -19,32 +19,31 @@ from pathlib import Path
 #
 #[2.  Setting the directory path]
 #2-1.  Setting the input and output directory paht.
-ORBIT_PATH = Path(r"E:\tables\orbit_start_end.csv")
-EQ_PATH    = Path(r"E:\tables\eq_m4.8above_depth40kmbelow_2004-2010_declustred_standardized.csv")
-OUTPUT_DIR = Path(r"E:\tables")
+ORBIT_PATH = Path(r"E:\tables\orbit_start_end\orbit_start_end_ver2.csv")
+EQ_PATH    = Path(r"E:\tables\earthquake_catalog\standardize\eq_standardize_ver2.csv")
+OUTPUT_DIR = Path(r"E:\tables\orbit_earthquake_candidate")
 #
 #2-2.  Show the directory in the terminal.
 print("Orbit_start_end.py file paht=", {ORBIT_PATH})
 print("Earthquake catalogue path=", {EQ_PATH})
-print("Directory of output", {OUTPUT_DIR})
+print("Directory of output\n", {OUTPUT_DIR})
 #
 #
 #[3.  Importing the orbit data from orbit_start_end.csv]
 #3-1.  Importing the orbit data from orbit_start_end.csv
 searchdata = pd.read_csv(ORBIT_PATH)
 searchdata = searchdata.sort_values("start_time").reset_index(drop=True)
+searchdata["orbit_file"] = searchdata["orbit_file"].astype("string")
+searchdata["start_time"] = pd.to_datetime(searchdata["start_time"], format="mixed")
+searchdata["end_time"] = pd.to_datetime(searchdata["end_time"], format ="mixed")
+searchdata.info()
 #
 #3-2.  Importing the earthquak data from a file
 eq_data = pd.read_csv(EQ_PATH)
-eq_data["4hour_before"] = eq_data["4hour_before"].astype(str).str.slice(0, 19)
-eq_data["4hour_before"] = eq_data["4hour_before"].str.replace("-", "").str.replace(":", "").str.replace(" ", "")
-eq_data["4hour_before"] = eq_data["4hour_before"].astype("int64")
+eq_data["4h_before"] = pd.to_datetime(eq_data["4h_before"], format="mixed")
 
-eq_data["datetime"] = eq_data["datetime"].astype(str).str.slice(0, 19)
-eq_data["datetime"] = eq_data["datetime"].str.replace("-", "").str.replace(":", "").str.replace(" ", "")
-eq_data["datetime"] = eq_data["datetime"].astype("int64")
-
-
+eq_data["datetime"] = pd.to_datetime(eq_data["datetime"],format="mixed")
+eq_data.info()
 #
 #[4.  Preparation of searching]
 #4-1. Caculate the length of earthquake data
@@ -71,11 +70,10 @@ for i in tqdm(range(length_eqdata), desc="EQ", unit="eq"):
 #5-5.  Extracting the orbit which meets time requiremet.
         if starteq < s1:
             break
-        elif beforeq <= s1 <= starteq:
-            list2.append(searchdata.iloc[j,0])
-        elif beforeq <= e1 <= starteq:
-            list2.append(searchdata.iloc[j,0])
-        
+        elif beforeq < s1 < starteq:
+            list2.append(searchdata["orbit_file"].iloc[j])
+        elif beforeq < e1 < starteq:
+            list2.append(searchdata["orbit_file"].iloc[j])
     list1[i] = list2
 #
 #
@@ -86,5 +84,5 @@ col_names = [f"orbit_meet_time_{i+1}" for i in range(max_cols)]
 data = pd.DataFrame(list1, columns=col_names)
 outputone = pd.concat([eq_data, data], axis=1)
 #6-3.  Exporting the data frame into a csv file.
-outputone.to_csv(OUTPUT_DIR / "orbit_quake_ver4.csv", index=False)
+outputone.to_csv(OUTPUT_DIR / "orbit_quake_ver6.csv", index=False)
 ###################################################################################################
