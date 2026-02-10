@@ -4,7 +4,7 @@ from pathlib import Path
 from tqdm.auto import tqdm
 # パスの設定
 USGS_PATH = Path(r"F:\external\eq_catalog\eq_m4.8above_depth40kmbelow_2004-2010.csv")
-OUTPUT_DIR = Path(r"E:\tables\earthquake_catalog")
+OUTPUT_DIR = Path(r"E:\tables\earthquake_catalog\declustered")
 
 def apply_utsu_window(magnitude):
     # 宇津の公式(1970)等の基準に基づく窓の設定例
