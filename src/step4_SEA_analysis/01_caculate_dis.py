@@ -32,6 +32,8 @@ OUTPUT_DIC.mkdir(parents=True, exist_ok=True)
 # [3.   Importing the table of earthquake-orbits matching]
 # 3-1.  Importing the talbe of earthquake-orbits macthing
 df = pd.read_csv(MAT_PATH)
+df["orbit_file"] = df["orbit_file"].astype("string")
+
 df.info()
 print(df)
 #
@@ -50,12 +52,11 @@ imported_count = 0
 # Matching Tableの行ずつ読み取るループを作成する。
 for i in tqdm(range(len(df)), desc="calculate dist", unit="file"):
     # 震央緯度、経度を抽出する。
-    lat1 = math.radians(df["eq_lat"].iloc[i])
-    lon1 = math.radians(df["eq_lon"].iloc[i])
-    print(type(lon1), type(lat1))
+    lat1 = df["eq_lat"].iloc[i]
+    lon1 =df["eq_lon"].iloc[i]
+    # print(type(lon1), type(lat1))
 
     # ファイル名を抽出する。
-    df["orbit_file"] = df["orbit_file"].astype("string")
     file_name = df["orbit_file"].iloc[i]
     # マッチング用ファイル名を作成する。
     eq_id = df["eq_id"].iloc[i]
@@ -72,7 +73,7 @@ for i in tqdm(range(len(df)), desc="calculate dist", unit="file"):
     for j in range(len(df_ob)):
         lat2 = math.radians(df_ob["lat"].iloc[j])
         lon2 = math.radians(df_ob["lon"].iloc[j])
-        print(lat2, type(lat2), lon2, type(lon2))
+        # print(lat2, type(lat2), lon2, type(lon2))
         dif_lat = lat2 - lat1
         dif_lon = lon2 - lon1
         
@@ -92,9 +93,8 @@ for i in tqdm(range(len(df)), desc="calculate dist", unit="file"):
 
         list1.append(dist)
     # Exporting as a csv file.
-    data = pd.DataFrame(list1)
-    output = pd.concat([df_ob, data], axis=1)
-    output.to_csv(OUTPUT_DIC / file_name, index=False)
+    df_ob["dist"] = list1
+    df_ob.to_csv(OUTPUT_DIC / file_name, index=True)
 
 print("total candidate num:", {len(df)})
 print("imported_count:", imported_count)
