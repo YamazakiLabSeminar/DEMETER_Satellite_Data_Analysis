@@ -4,7 +4,7 @@ import math
 from tqdm.auto import tqdm
 
 ORBIT_DATA_DIR  = Path(r"E:\interim\step2_normalized")
-EQ_PATH         = Path(r"E:\tables\orbit_earthquake_candidate\orbit_quake_ver6.csv")
+EQ_PATH         = Path(r"E:\tables\orbit_earthquake_candidate\orbit_quake_ver8.csv")
 OUTPUT_DIR      = Path(r"E:\tables\orbit_eq_match")
 
 # [1. 地球の離心率の計算]
@@ -137,9 +137,9 @@ print("dist < 330 count =", count_dist)
 
 data = pd.DataFrame(list1,columns=["eq_id","4h_before","occur_time","eq_lat","eq_lon","depth","mag",
                                    "orbit_file","330_time","lat","lon","mlat","mlon","dist","330_row"])
-data.to_csv(OUTPUT_DIR/"orbit_quake_distance_ver13.csv", index=False)
+data.to_csv(OUTPUT_DIR/"orbit_quake_distance_ver15.csv", index=False)
 
 # 保存: 読み取った全ファイルパス一覧
 pd.DataFrame({"file_path": used_orbit_files}).to_csv(
-    OUTPUT_DIR / "orbit_files_used_ver13.csv", index=False
+    OUTPUT_DIR / "orbit_files_used_ver15.csv", index=False
 )
