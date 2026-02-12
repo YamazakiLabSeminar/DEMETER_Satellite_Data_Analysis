@@ -20,7 +20,7 @@ from pathlib import Path
 #[2.  Setting the directory path]
 #2-1.  Setting the input and output directory paht.
 ORBIT_PATH = Path(r"E:\tables\orbit_start_end\orbit_start_end_ver2.csv")
-EQ_PATH    = Path(r"E:\tables\earthquake_catalog\standardize\eq_standardize_ver4.csv")
+EQ_PATH    = Path(r"E:\tables\earthquake_catalog\standardize\eq_standardize_ver7.csv")
 OUTPUT_DIR = Path(r"E:\tables\orbit_earthquake_candidate")
 #
 #2-2.  Show the directory in the terminal.
@@ -84,5 +84,5 @@ col_names = [f"orbit_meet_time_{i+1}" for i in range(max_cols)]
 data = pd.DataFrame(list1, columns=col_names)
 outputone = pd.concat([eq_data, data], axis=1)
 #6-3.  Exporting the data frame into a csv file.
-outputone.to_csv(OUTPUT_DIR / "orbit_quake_ver8.csv", index=False)
+outputone.to_csv(OUTPUT_DIR / "orbit_quake_ver10.csv", index=False)
 ###################################################################################################

@@ -20,7 +20,7 @@ from collections import Counter
 #
 #
 # [2.    Setting the directories/pathes]
-MAT_PATH = Path(r"E:\tables\orbit_eq_match\orbit_quake_distance_ver15.csv")
+MAT_PATH = Path(r"E:\tables\orbit_eq_match\orbit_quake_distance_ver17.csv")
 ORBIT_DIC = Path(r"E:\interim\step2_normalized")
 OUTPUT_DIC = Path(r"E:\interim\orbit_data_for_sea_analysis_candidate")
 #

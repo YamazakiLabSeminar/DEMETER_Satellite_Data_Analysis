@@ -1,7 +1,7 @@
 import pandas as pd
 
-DATA = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Data\eq_m4.8above_depth40kmbelow_200407-201012.csv'
-OUTPUT_FILE = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Output\eq_m4.8above_depth40kmbelow_200407-201012_add_time_row.csv'
+DATA = r"F:\external\eq_catalog\eq_m4.8above_depth40kmbelow_2004-2010.csv"
+OUTPUT_FILE = r"E:\tables\earthquake_catalog\add_time_column\eq_m4.8above_depth40kmbelow_2004-2010_add_time_row_ver2.csv"
 df = pd.read_csv(DATA, encoding='utf-8-sig')
 time_list = pd.to_datetime(df['time'])
 output_df = pd.DataFrame({'year':time_list.dt.year,
@@ -13,7 +13,7 @@ output_df = pd.DataFrame({'year':time_list.dt.year,
                           'microsecond':time_list.dt.microsecond,
                           'latitude':df['latitude'],
                           'longitude':df['longitude'],
-                          'magnitude':df['mag'],
+                          'mag':df['mag'],
                           'depth':df['depth']
                           })
 

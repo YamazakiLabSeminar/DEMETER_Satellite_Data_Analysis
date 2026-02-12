@@ -20,7 +20,7 @@ import pprint
 #
 # [2.    Setting the directories/pathes]
 # 2-1.  Setting the drectories/pathes
-MAT_PATH = Path(r"E:\tables\orbit_eq_match\orbit_quake_distance_ver15.csv")
+MAT_PATH = Path(r"E:\tables\orbit_eq_match\orbit_quake_distance_ver17.csv")
 CAND_DIC = Path(r"E:\interim\orbit_data_for_sea_analysis_candidate_dist")
 OUTPUT_DIC = Path(r"E:\tables\orbit_eq_match_with_closest_time_dist")
 #
@@ -98,4 +98,4 @@ outputone = outputone.rename(columns={
     "dist": "closest_dist"
 })
 # csvファイルとして出力する。
-outputone.to_csv(OUTPUT_DIC / "closest_time_dist_ver1.csv", index=False)
+outputone.to_csv(OUTPUT_DIC / "closest_time_dist_ver2.csv", index=False)

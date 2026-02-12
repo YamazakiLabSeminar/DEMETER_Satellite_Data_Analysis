@@ -4,8 +4,8 @@ import datetime
 import os
 
 # ======== 0.パースの設定 ========
-INPUT_DATA = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Output\eq_m4.8above_depth40kmbelow_200407-201012_add_time_row.csv'
-OUTPUT_DATA = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Output\all_eq_declustring_30day_30km.csv'
+INPUT_DATA = r"E:\tables\earthquake_catalog\add_time_column\eq_m4.8above_depth40kmbelow_2004-2010_add_time_row_ver2.csv"
+OUTPUT_DATA = r"E:\tables\earthquake_catalog\declustered\eq_m4.8above_depth40kmbelow_2004-2010_declustered_ver5.csv"
 LOG_FILE = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Output\log_30day_30km.txt'
 LOG_FILE_CSV = r'C:\Users\nzy27\Documents\Github\DEMETER_Satellite_Data_Analysis\Step00_Declustring\Output\log_30day_30km.csv'
 
@@ -67,7 +67,7 @@ def declustring():
     # 2.データの読み込み
     print(f'[Info] Reading input file: {INPUT_DATA}')
     df = pd.read_csv(INPUT_DATA,
-                     usecols = ['year', 'month','day','hour','minute','second','latitude','longitude','magnitude']
+                     usecols = ['year', 'month','day','hour','minute','second','latitude','longitude','mag',"depth"]
     )
 
     # 3.時間列をdatetime形式に
@@ -81,7 +81,7 @@ def declustring():
     df['removed_flag'] = False
 
     # 6.dfの作成(マグニチュード順/時系列順)
-    df_mag = df.sort_values(by='magnitude', ascending=False).reset_index(drop=True) #マグニチュード降順
+    df_mag = df.sort_values(by='mag', ascending=False).reset_index(drop=True) #マグニチュード降順
     df_time = df.sort_values(by='datetime', ascending=True).reset_index(drop=True)  #時系列昇順
     print(f'[Info] Events dataframe sorted by magnitude:{df_mag}')
     print(f'[Info] Events dataframe sorted by time:{df_time}')

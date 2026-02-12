@@ -46,7 +46,7 @@ from pathlib import Path
 #
 #**************************************************************************************************
 # [2.   Setting the path/directory]
-EQ_DATA = Path(r"E:\tables\earthquake_catalog\declustered\eq_m4.8above_depth40kmbelow_2004_2010_declustered_ver3.csv")
+EQ_DATA = Path(r"E:\tables\earthquake_catalog\declustered\eq_m4.8above_depth40kmbelow_2004-2010_declustered_ver6.csv")
 OUTPUT_DIR = Path(r"E:\tables\earthquake_catalog\standardize")
 #
 #**************************************************************************************************
@@ -103,6 +103,6 @@ print(df)
 #**************************************************************************************************
 # [6.   Exporting the data frame as a csv file]
 # 6-1.  Outputing dataframe as a csv file.
-df.to_csv(OUTPUT_DIR / "eq_standardize_ver4.csv", index=False)
+df.to_csv(OUTPUT_DIR / "eq_standardize_ver7.csv", index=False)
 #
 #**************************************************************************************************

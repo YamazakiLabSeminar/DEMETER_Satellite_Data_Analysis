@@ -23,9 +23,9 @@ import shutil
 #--------------------------------------------------------------------------------------------------
 # [2.   Setting Path]
 # 2-1.  Setting Path and Directory
-MATCH_TABLE_PATH = Path(r"E:\tables\orbit_eq_match_with_closest_time_dist\closest_time_dist_ver1.csv")
+MATCH_TABLE_PATH = Path(r"E:\tables\orbit_eq_match_with_closest_time_dist\closest_time_dist_ver2.csv")
 SEA_CAN_DIST_DIC = Path(r"E:\interim\orbit_data_for_sea_analysis_candidate_dist")
-OUTPUT_PATH = Path(r"E:\tables\SEA_analysis_eq_ob_ver1.csv")
+OUTPUT_PATH = Path(r"E:\tables\orbit_with_+-200s")
 NEW_ADDRESS = Path(r"E:\interim\orbit_data_for_sea_analysis_+-200s")
 # 2-2.  パス存在した場合の対策
 NEW_ADDRESS.mkdir(parents=True, exist_ok=True)
@@ -93,7 +93,7 @@ for i in range(len(df)):
         pass
 
 df_output = pd.DataFrame(list1, columns=USECOLS)
-df_output.to_csv(OUTPUT_PATH, index=False)
+df_output.to_csv(OUTPUT_PATH / "SEA_analysis_eq_ob_ver2.csv", index=False)
 #
 #--------------------------------------------------------------------------------------------------
 # [6.    処理結果を示す。]
