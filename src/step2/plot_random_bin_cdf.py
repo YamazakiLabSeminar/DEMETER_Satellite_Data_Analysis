@@ -106,17 +106,18 @@ def plot_scatter(
     out_path: Path,
     logx: bool,
 ) -> None:
-    plt.figure(figsize=(6, 4))
-    plt.scatter(e_vals, en_vals, s=6, alpha=0.6, edgecolors="none")
-    plt.title(f"E_1700band_mean vs E_norm (bin_id={bin_id})")
-    plt.xlabel("E_1700band_mean")
-    plt.ylabel("E_norm")
+    fig, ax = plt.subplots(layout="constrained")
+    ax.scatter(e_vals, en_vals, s=6, alpha=0.6, edgecolors="none")
+    ax.set_title(f"E_1700band_mean vs E_norm (bin_id={bin_id})", fontsize=18)
+    ax.set_xlabel("E_1700band_mean", fontsize=18)
+    ax.set_ylabel("E_norm", fontsize=18)
+    ax.tick_params(axis="both", labelsize=12)
     if logx:
-        plt.xscale("log")
-    plt.grid(True, alpha=0.3)
+        ax.set_xscale("log")
+    ax.grid(True, alpha=0.3)
     plt.tight_layout()
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(out_path, dpi=150)
+    plt.savefig(out_path, dpi=300)
     plt.close()
 
 
