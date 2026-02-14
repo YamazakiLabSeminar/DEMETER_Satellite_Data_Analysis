@@ -107,8 +107,8 @@ def plot_scatter(
     logx: bool,
 ) -> None:
     fig, ax = plt.subplots(layout="constrained")
-    ax.scatter(e_vals, en_vals, s=6, alpha=0.6, edgecolors="none")
-    ax.set_title(f"E_1700band_mean vs E_norm (bin_id={bin_id})", fontsize=18)
+    ax.plot(e_vals, en_vals, linestyle="None", marker="o", markersize=3, alpha=0.6)
+    ax.set_title(f"bin_id={bin_id}", fontsize=12)
     ax.set_xlabel("E_1700band_mean", fontsize=18)
     ax.set_ylabel("E_norm", fontsize=18)
     ax.tick_params(axis="both", labelsize=12)

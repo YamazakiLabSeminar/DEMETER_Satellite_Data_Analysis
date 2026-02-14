@@ -19,7 +19,6 @@
 import pandas as pd
 from pathlib import Path
 from tqdm.auto import tqdm
-import shutil
 #--------------------------------------------------------------------------------------------------
 # [2.   Setting Path]
 # 2-1.  Setting Path and Directory
@@ -32,8 +31,8 @@ NEW_ADDRESS.mkdir(parents=True, exist_ok=True)
 #--------------------------------------------------------------------------------------------------
 # [3.   Setting Parameter]
 ###################################################################################################
-before = 97     # 最接近時刻から前97個サンプル(-97row)
-after = 97      # 最接近時刻から後97個サンプル(+97row)
+before = 100     # 最接近時刻から前100個サンプル(-100row)
+after = 100      # 最接近時刻から後100個サンプル(+100row)
 
 USECOLS = ["eq_id","orbit_num", "min_index"]    # Match Tableで使用される列
 have_count = 0      # 最接近時刻から+-200sにデータがある軌道データファイル数
@@ -74,7 +73,7 @@ for i in range(len(df)):
     # 5-6.  Confirm the correction of min_index
     if i<10:
         print(min_dist)
-    # 5-7.  min_indexから前後97個サンプルがあるかないかを調べる。
+    # 5-7.  min_indexから前後100個サンプルがあるかないかを調べる。
     n = len(df_ob)      # df_obの行数
     has_window = (min_index - before >= 0) and (min_index + after < n)
 
@@ -85,7 +84,8 @@ for i in range(len(df)):
 
     # 5-8.  あったら、新しいフォルダにそのファイルをコピーし保存する。
     if has_window:
-        shutil.copy2(SEA_CAN_DIST_DIC / file_name, NEW_ADDRESS / file_name)
+        window = df_ob.iloc[min_index - before : min_index + after + 1].copy()
+        window.to_csv(NEW_ADDRESS / file_name, index=False)
         row = df.iloc[i].to_dict()
         list1.append(row)
         have_count += 1
@@ -93,7 +93,7 @@ for i in range(len(df)):
         pass
 
 df_output = pd.DataFrame(list1, columns=USECOLS)
-df_output.to_csv(OUTPUT_PATH / "SEA_analysis_eq_ob_ver2.csv", index=False)
+df_output.to_csv(OUTPUT_PATH / "SEA_analysis_eq_ob_ver3.csv", index=False)
 #
 #--------------------------------------------------------------------------------------------------
 # [6.    処理結果を示す。]
