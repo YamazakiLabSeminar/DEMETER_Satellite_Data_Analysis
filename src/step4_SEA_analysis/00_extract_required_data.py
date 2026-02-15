@@ -20,7 +20,7 @@ from collections import Counter
 #
 #
 # [2.    Setting the directories/pathes]
-MAT_PATH = Path(r"E:\tables\orbit_eq_match\orbit_quake_distance_ver17.csv")
+MAT_PATH = Path(r"E:\tables\orbit_eq_match\orbit_quake_distance_ver19.csv")
 ORBIT_DIC = Path(r"E:\interim\step2_normalized")
 OUTPUT_DIC = Path(r"E:\interim\orbit_data_for_sea_analysis_candidate")
 #
@@ -46,9 +46,6 @@ df["orbit_file"] = df["orbit_file"].astype("string")
 #
 #
 # [4.   Extracting the required data which using for the SEA analysis]
-# 出力用DataFrameの作成
-df_output = pd.DataFrame(columns=["bin_id","datetime","lat","lon","mlat","mlon","E_norm"])
-
 # # Creating the file name
 missing_file = []
 for i in tqdm(range(len(df)), desc="Extracting required data from matched orbit data", unit="file"):
@@ -70,16 +67,12 @@ for i in tqdm(range(len(df)), desc="Extracting required data from matched orbit 
     #print("===================================================")
     #print(df_orbit)
 
-    # Extracting the required data from orbit df
-    df_output["bin_id"] = df_orbit["bin_id"]
-    df_output["datetime"] = df_orbit["datetime"]
-    df_orbit["lat"] = df_orbit["lat"].astype(float).round(8)
-    df_output["lat"] = df_orbit["lat"]
-    df_orbit["lon"] = df_orbit["lon"].astype(float).round(7)
-    df_output["lon"] = df_orbit["lon"]
-    df_output["mlat"] = df_orbit["mlat"]
-    df_output["mlon"] = df_orbit["mlon"]
-    df_output["E_norm"] = df_orbit["E_norm"]
+    # Extracting the required data from orbit df.
+    # Recreate output DataFrame for each file to avoid carrying rows
+    # from a previous (longer) orbit file.
+    df_output = df_orbit[["bin_id", "datetime", "lat", "lon", "mlat", "mlon", "E_norm"]].copy()
+    df_output["lat"] = df_output["lat"].astype(float).round(8)
+    df_output["lon"] = df_output["lon"].astype(float).round(7)
     
     # ex.   Confirming the information of the data frame.
     #print("[Info]   Table of output\n==================================================")

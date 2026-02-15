@@ -20,7 +20,7 @@ import pprint
 #
 # [2.    Setting the directories/pathes]
 # 2-1.  Setting the drectories/pathes
-MAT_PATH = Path(r"E:\tables\orbit_eq_match\orbit_quake_distance_ver17.csv")
+MAT_PATH = Path(r"E:\tables\orbit_eq_match\orbit_quake_distance_ver19.csv")
 CAND_DIC = Path(r"E:\interim\orbit_data_for_sea_analysis_candidate_dist")
 OUTPUT_DIC = Path(r"E:\tables\orbit_eq_match_with_closest_time_dist")
 #
@@ -30,7 +30,7 @@ OUTPUT_DIC.mkdir(parents=True, exist_ok=True)
 #**************************************************************************************************
 # [3.   Importing matching table]
 # 3-1.  Importing matching table.
-cols = ["eq_id","4h_before","occur_time","eq_lat","eq_lon","depth","mag","orbit_file"]
+cols = ["eq_id","4h_before","occur_time","latitude","longitude","longitude_360","mag","orbit_file"]
 df = pd.read_csv(MAT_PATH)
 df.info()
 #
@@ -39,7 +39,7 @@ df.info()
 # 4-1.  Creating a new Data Frame.
 df_output = pd.DataFrame(columns=cols)
 #
-# 4-2.  Extracting "eq_id","4h_before","occur_time","eq_lat","eq_lon","depth","mag","orbit_file"
+# 4-2.  Extracting "eq_id","4h_before","occur_time","latitude","longitude","depth","mag","orbit_file"
 df_output[cols] = df[cols]
 #
 # 4-3.  軌道ファイル名を文字列に
@@ -90,7 +90,7 @@ outputone = pd.concat([df_output, data], axis=1)
 # "orbit_file"列を削除する
 outputone = outputone.drop(columns=["orbit_file"])
 # dfの列の順番を変える。
-outputone = outputone.reindex(columns=["eq_id","4h_before","occur_time","eq_lat","eq_lon","depth","mag","orbit_num",
+outputone = outputone.reindex(columns=["eq_id","4h_before","occur_time","latitude","longitude","longitude_360","mag","orbit_num",
                                        "min_index","datetime","dist","bin_id","lat","lon","mlat","mlon","E_norm"])
 # 列名を変える。
 outputone = outputone.rename(columns={
@@ -98,4 +98,4 @@ outputone = outputone.rename(columns={
     "dist": "closest_dist"
 })
 # csvファイルとして出力する。
-outputone.to_csv(OUTPUT_DIC / "closest_time_dist_ver2.csv", index=False)
+outputone.to_csv(OUTPUT_DIC / "closest_time_dist_ver4.csv", index=False)

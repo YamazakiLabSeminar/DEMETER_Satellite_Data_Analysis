@@ -46,9 +46,9 @@ ax.plot(t_mean_df["time_s"], t_mean_df["mean_E_norm"], label="SEA Analysis Resul
 
 ax.tick_params(axis='both', labelsize=12)
 ax.set_xticks([-200, -150, -100, -50, 0, 50, 100, 150, 200])
-ax.set_xlabel('Time (s)', fontsize=18)
+ax.set_xlabel('Time (s)', fontsize=18)  
 ax.set_ylabel('Mean E_norm', fontsize=18)
 ax.legend(fontsize=18)
 plt.tight_layout()
 
-fig.savefig(OUTPUT_DIR / "sea_analysis_results_ver3.png", dpi=300)
+fig.savefig(OUTPUT_DIR / "sea_analysis_results_ver5.png", dpi=300)

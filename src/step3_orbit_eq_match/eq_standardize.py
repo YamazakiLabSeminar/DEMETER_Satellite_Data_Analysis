@@ -46,30 +46,31 @@ from pathlib import Path
 #
 #**************************************************************************************************
 # [2.   Setting the path/directory]
-EQ_DATA = Path(r"E:\tables\earthquake_catalog\declustered\eq_m4.8above_depth40kmbelow_2004-2010_declustered_ver6.csv")
+EQ_DATA = Path(r"E:\tables\earthquake_catalog\declustered\all-eq-declustering-30day-30km.csv")
 OUTPUT_DIR = Path(r"E:\tables\earthquake_catalog\standardize")
+
+if not OUTPUT_DIR.exists():
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 #
 #**************************************************************************************************
 # [3.   Importing inputdata]
 # 3-1.  Importint the eq_data as a data frame.
-df = pd.read_csv(EQ_DATA,usecols=["time","latitude","longitude","depth","mag"])
+df = pd.read_csv(EQ_DATA,usecols=["datetime","latitude","longitude","mag"])
 df.info()
 print(df)
 #
 #**************************************************************************************************
 # [4.   Converting format of "time" column]
 # 4-1.  Converting string into datetime64(without timezone info) which is reserved in EQ_DATA
-df["time"] = pd.to_datetime(df["time"], format="mixed", utc=True).dt.tz_localize(None)
+df["datetime"] = pd.to_datetime(df["datetime"], format="mixed", utc=True).dt.tz_localize(None)
 df.info()
 #
 # 4-2.  Changing datetime format
-df["time"] = df["time"].dt.strftime("%Y/%m/%d  %H:%M:%S")
+df["datetime"] = df["datetime"].dt.strftime("%Y/%m/%d  %H:%M:%S")
 #
 # 4-3.  Converting the new format "datetime" from object into datetime64
-df["time"] = pd.to_datetime(df["time"], format="%Y/%m/%d  %H:%M:%S")
-df["datetime"] = df["time"]
-df= df.drop("time", axis=1)
-print("Converting the new format time from object into datetime64")
+df["datetime"] = pd.to_datetime(df["datetime"], format="%Y/%m/%d  %H:%M:%S")
+print("Converting the new format datetime from object into datetime64")
 df.info()
 print(df)
 #
@@ -94,8 +95,15 @@ print("Inserting eq_id column")
 df.info()
 print(df)
 #
+# 5-3.  Modigying longitude if it is negative value
+'''
+例：
+-123.45 -> 360 - 123.45 = 236.55
+'''
+df["longitude360"] = df["longitude"].where(df["longitude"] >= 0, df["longitude"] + 360)
+#
 # 5-3.  Changing the order of columns
-df = df.reindex(columns=["eq_id","4h_before","datetime","latitude","longitude","depth","mag"])
+df = df.reindex(columns=["eq_id","4h_before","datetime","latitude","longitude","longitude360","mag"])
 print("Changing the order of columns")
 df.info()
 print(df)
@@ -103,6 +111,6 @@ print(df)
 #**************************************************************************************************
 # [6.   Exporting the data frame as a csv file]
 # 6-1.  Outputing dataframe as a csv file.
-df.to_csv(OUTPUT_DIR / "eq_standardize_ver7.csv", index=False)
+df.to_csv(OUTPUT_DIR / "eq_standardize_ver8.csv", index=False)
 #
 #**************************************************************************************************

@@ -4,11 +4,17 @@ import math
 from tqdm.auto import tqdm
 
 ORBIT_DATA_DIR  = Path(r"E:\interim\step2_normalized")
-EQ_PATH         = Path(r"E:\tables\orbit_earthquake_candidate\orbit_quake_ver10.csv")
+EQ_PATH         = Path(r"E:\tables\orbit_earthquake_candidate\orbit_quake_ver11.csv")
 OUTPUT_DIR      = Path(r"E:\tables\orbit_eq_match")
 
-# [1. 地球の離心率の計算]
-#--------------------------------------------------------------------------------------------------
+# [2.   入力データのインポート]
+# 2-1.  地震カタログ(時間条件に満たした候補軌道番号が付いたやつ)orbit_quake_ver*.csvを読み取る。
+df = pd.read_csv(EQ_PATH)
+df.info()
+#
+#
+# [3.   Preparing for cheking the distance between sample and epicenter]
+# 3-1.  離心率の計算
 # WGS84 model
 a = 6378137                                     # the long radius of the Earth
 b = 6356752.314245                              # the short radius of the Earth
@@ -18,59 +24,37 @@ e = math.sqrt((a*a - b*b)/(a*a))                # eccentricity of the Earth
 print("a:<type>{},", type(a), a)
 print("b:<type>{},", type(b), b)
 print("e:<type>{}", type(e), e)
-#**************************************************************************************************
-
-# [2.   入力データのインポート]
-#--------------------------------------------------------------------------------------------------
-# 2-1.  地震カタログ(時間条件に満たした候補軌道番号が付いたやつ)orbit_quake_ver*.csvを読み取る。
-df = pd.read_csv(
-    EQ_PATH,
-    usecols=[
-        "eq_id",
-        "4h_before",
-        "datetime",
-        "latitude",
-        "longitude",
-        "depth",
-        "mag",
-        "orbit_meet_time_1",
-        "orbit_meet_time_2",
-        "orbit_meet_time_3",
-    ]
-)
-df.info()
-# 候補軌道列に欠損値、空白セルがあれば、その行を消し、インデックスリセットし、元のインデックスを捨てる。
-df = df.dropna(subset=["orbit_meet_time_1","orbit_meet_time_2","orbit_meet_time_3"], how="all"
-               ).reset_index(drop=True)
-
-df["4hour_before"] = pd.to_datetime(df["4h_before"], format="mixed")
-df["datetime"] = pd.to_datetime(df["datetime"], format="mixed")
-print("DataFrame of searchdata\n")
-df.info()
-print("")
-print(df)
-
-# 2-2.  data frameの行数を返す。
+#
+# 3-2.  地震データと地震軌道データを保存するlistを作成する。
 length = len(df)
-
-# 2-3.  地震データと地震軌道データを保存するlistを作成する。
 list1 = []
 used_orbit_files = []
-#**************************************************************************************************
-
-# [3.   距離条件に従う軌道の抽出]
-#--------------------------------------------------------------------------------------------------
+#
+# 3-3.  時間条件候補リストの列名（列位置固定を避ける）
+candidate_columns = [c for c in df.columns if c.startswith("orbit_meet_time_")]
+if not candidate_columns:
+    raise ValueError("No orbit candidate columns found (expected columns like orbit_meet_time_*)")
+#
+# 3-4.  距離条件に従う軌道の数をカウントする変数
 count_dist = 0
-candidate_columns = [7, 8, 9]
-for i in tqdm(range(length), desc="Searching", unit="eq"):     # dfのデータの行数の範囲
-    lat1 = math.radians(df["latitude"].iloc[i])      # 地震の緯度(ラジアン変換)
-    lon1 = math.radians(df["longitude"].iloc[i])      # 地震の経度(ラジアン変換)
-    start = df["4hour_before"].iloc[i]      # 地震発生4時間前の時刻
-    end = df["datetime"].iloc[i]            # 地震発生時刻
+#
+#
+# [4.   距離条件に従う軌道の抽出]
+# 前処理（ループ内で同じ変換を繰り返さない）
+df["4h_before"] = pd.to_datetime(df["4h_before"], format="mixed", errors="coerce")
+df["datetime"] = pd.to_datetime(df["datetime"], format="mixed", errors="coerce")
 
-    found = False
+# 4-1.  地震データの行数の範囲でループを作成する。
+for i in tqdm(range(length), desc="Searching", unit="eq"):     # dfのデータの行数の範囲
+#
+# 4-2.  地震の緯度、経度(0-360)、地震発生4時間前の時刻、地震発生時刻を抽出する。
+    lat1 = math.radians(df["latitude"].iloc[i])      # 地震の緯度(ラジアン変換)
+    lon1 = math.radians(df["longitude_360"].iloc[i])      # 地震の経度(ラジアン変換)
+    start = df["4h_before"].iloc[i]      # 地震発生4時間前の時刻
+    end = df["datetime"].iloc[i]         # 地震発生時刻
+
     for col in candidate_columns:
-        orbit_num = df.iat[i, col]
+        orbit_num = df.at[i, col]
         if pd.isna(orbit_num):
             continue
         orbit_num = str(orbit_num).strip()
@@ -107,6 +91,8 @@ for i in tqdm(range(length), desc="Searching", unit="eq"):     # dfのデータ�
             if dif_lon > math.pi:
                 dif_lon = 2*math.pi - dif_lon
 
+            if dif_lon < -math.pi:
+                dif_lon = 2*math.pi + dif_lon
             P = (lat1+lat2) / 2.0                                         # 両点緯度の平均値
             W = math.sqrt(1.0-e*e * math.sin(P) * math.sin(P))
             M = (a*(1.0 - e*e)) / (W * W * W)
@@ -125,21 +111,20 @@ for i in tqdm(range(length), desc="Searching", unit="eq"):     # dfのデータ�
                     list1.append([df["eq_id"].iloc[i],
                                  start,
                                  end,
-                                 lat1, lon1,df["depth"].iloc[i],df["mag"].iloc[i],
-                                 orbit_num, s1, lat2, lon2, df_ob["mlat"].iloc[j], df_ob["mlon"].iloc[j],dist,int(j)])
-                    found = True
+                                 df["latitude"].iloc[i], df["longitude"].iloc[i],
+                                 df["longitude_360"].iloc[i],df["mag"].iloc[i],
+                                 orbit_num, s1, df_ob["lat"].iloc[j], df_ob["lon"].iloc[j],
+                                 df_ob["mlat"].iloc[j], df_ob["mlon"].iloc[j],dist,int(j)])
                     break
-        if found:
-            break
 
 
 print("dist < 330 count =", count_dist)
 
-data = pd.DataFrame(list1,columns=["eq_id","4h_before","occur_time","eq_lat","eq_lon","depth","mag",
+data = pd.DataFrame(list1,columns=["eq_id","4h_before","occur_time","latitude","longitude","longitude_360","mag",
                                    "orbit_file","330_time","lat","lon","mlat","mlon","dist","330_row"])
-data.to_csv(OUTPUT_DIR/"orbit_quake_distance_ver17.csv", index=False)
+data.to_csv(OUTPUT_DIR/"orbit_quake_distance_ver19.csv", index=False)
 
 # 保存: 読み取った全ファイルパス一覧
 pd.DataFrame({"file_path": used_orbit_files}).to_csv(
-    OUTPUT_DIR / "orbit_files_used_ver17.csv", index=False
+    OUTPUT_DIR / "orbit_files_used_ver19.csv", index=False
 )

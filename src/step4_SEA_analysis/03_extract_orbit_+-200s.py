@@ -22,7 +22,7 @@ from tqdm.auto import tqdm
 #--------------------------------------------------------------------------------------------------
 # [2.   Setting Path]
 # 2-1.  Setting Path and Directory
-MATCH_TABLE_PATH = Path(r"E:\tables\orbit_eq_match_with_closest_time_dist\closest_time_dist_ver2.csv")
+MATCH_TABLE_PATH = Path(r"E:\tables\orbit_eq_match_with_closest_time_dist\closest_time_dist_ver4.csv")
 SEA_CAN_DIST_DIC = Path(r"E:\interim\orbit_data_for_sea_analysis_candidate_dist")
 OUTPUT_PATH = Path(r"E:\tables\orbit_with_+-200s")
 NEW_ADDRESS = Path(r"E:\interim\orbit_data_for_sea_analysis_+-200s")
@@ -31,8 +31,8 @@ NEW_ADDRESS.mkdir(parents=True, exist_ok=True)
 #--------------------------------------------------------------------------------------------------
 # [3.   Setting Parameter]
 ###################################################################################################
-before = 100     # 最接近時刻から前100個サンプル(-100row)
-after = 100      # 最接近時刻から後100個サンプル(+100row)
+before = 125     # 最接近時刻から前100個サンプル(-100row)
+after = 125      # 最接近時刻から後100個サンプル(+100row)
 
 USECOLS = ["eq_id","orbit_num", "min_index"]    # Match Tableで使用される列
 have_count = 0      # 最接近時刻から+-200sにデータがある軌道データファイル数
@@ -93,7 +93,7 @@ for i in range(len(df)):
         pass
 
 df_output = pd.DataFrame(list1, columns=USECOLS)
-df_output.to_csv(OUTPUT_PATH / "SEA_analysis_eq_ob_ver3.csv", index=False)
+df_output.to_csv(OUTPUT_PATH / "SEA_analysis_eq_ob_ver4.csv", index=False)
 #
 #--------------------------------------------------------------------------------------------------
 # [6.    処理結果を示す。]

@@ -24,7 +24,7 @@ if not OUTPUT_DIR.exists():
 #
 # [3.       SEA Analysis Settings ]
 #==================================================================================================
-TIME_WINDOW = 200  # seconds
+TIME_WINDOW = 250  # seconds
 TIME_RESOLUTION = 2  # seconds
 
 # 出力用dataframe

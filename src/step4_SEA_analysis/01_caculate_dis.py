@@ -21,7 +21,7 @@ import pprint
 #
 # [2.    Setting the directories/pathes]
 # 2-1.  Setting the drectories/pathes
-MAT_PATH = Path(r"E:\tables\orbit_eq_match\orbit_quake_distance_ver17.csv")
+MAT_PATH = Path(r"E:\tables\orbit_eq_match\orbit_quake_distance_ver19.csv")
 CAND_DIC = Path(r"E:\interim\orbit_data_for_sea_analysis_candidate")
 OUTPUT_DIC = Path(r"E:\interim\orbit_data_for_sea_analysis_candidate_dist")
 #
@@ -33,39 +33,38 @@ OUTPUT_DIC.mkdir(parents=True, exist_ok=True)
 # 3-1.  Importing the talbe of earthquake-orbits macthing
 df = pd.read_csv(MAT_PATH)
 df["orbit_file"] = df["orbit_file"].astype("string")
-
-df.info()
-print(df)
 #
 #
+# [4.   Preparing for cheking the distance between sample and epicenter]
+# 4-1.  地球の長半径、短半径、離心率を定義する。
 a = 6378137                                     # the long radius of the Earth
 b = 6356752.314245                              # the short radius of the Earth
 
 e = math.sqrt((a*a - b*b)/(a*a))                # eccentricity of the Earth
-# [4.   Caculating the distance between sample and epicenter of the individual sea 
-# analysis candidate orbit file.]
-# Creating a list which contains the whole file name in sea analysis candidate folder.
-# cand_list = [p.name for p in CAND_DIC.glob("*.csv")]
-# pprint.pprint(cand_list)
-# print(type(cand_list[10]))
+#
+# 4-2.  衛星データを輸入した場合のカウントを作成する。
 imported_count = 0
-# Matching Tableの行ずつ読み取るループを作成する。
+#
+#
+# [5.   Caculating the distance between sample and epicenter of the individual sea 
+#       analysis candidate orbit file.]
+# 5-1.  Matching Tableの行ずつ読み取るループを作成する。
 for i in tqdm(range(len(df)), desc="calculate dist", unit="file"):
-    # 震央緯度、経度を抽出する。
-    lat1 = df["eq_lat"].iloc[i]
-    lon1 =df["eq_lon"].iloc[i]
+# 5-2.  震央緯度、経度を抽出し、ラジアンに変換する。
+    lat1 = math.radians(df["latitude"].iloc[i])
+    lon1 = math.radians(df["longitude_360"].iloc[i])
     # print(type(lon1), type(lat1))
 
-    # ファイル名を抽出する。
+# 5-3.  マッチングされた軌道ファイル名を抽出する。
     file_name = df["orbit_file"].iloc[i]
-    # マッチング用ファイル名を作成する。
+# 5-4.  マッチング用ファイル名を作成する。
     eq_id = df["eq_id"].iloc[i]
     stem = Path(file_name).stem  
     base = stem.split("_step")[0]
     file_name = f"{base}_eq{eq_id}.csv"
     # print(file_name, type(file_name))
 
-    # CAND_DICにある同名ファイルを読みとる。
+# 5-5.  CAND_DICにある同名ファイルを読みとる。
     df_ob = pd.read_csv(CAND_DIC / file_name)
     list1=[]
     imported_count += 1
